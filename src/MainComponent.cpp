@@ -27,6 +27,8 @@ void selectItemContaining (juce::ComboBox& combo, const juce::String& text)
 } // namespace
 
 MainComponent::MainComponent()
+    : inputMeter ("Input"),
+      outputMeter ("Output")
 {
     titleLabel.setText ("Linux DAW", juce::dontSendNotification);
     titleLabel.setFont (juce::FontOptions{}.withHeight (22.0f).withStyle ("Bold"));
@@ -65,6 +67,9 @@ MainComponent::MainComponent()
 
     processorControls = std::make_unique<ProcessorControlsComponent> (engine.getAudioGraph());
     addAndMakeVisible (*processorControls);
+
+    addAndMakeVisible (inputMeter);
+    addAndMakeVisible (outputMeter);
 
     statusLabel.setMultiLine (true, false);
     statusLabel.setReadOnly (true);
@@ -119,13 +124,48 @@ void MainComponent::resized()
     auto statusBounds = bounds.removeFromBottom (120);
     bounds.removeFromBottom (10);
 
-    processorControls->setBounds (bounds);
+    auto metersBounds = statusBounds.removeFromLeft (110);
+    inputMeter.setBounds (metersBounds.removeFromLeft (50));
+    metersBounds.removeFromLeft (10);
+    outputMeter.setBounds (metersBounds.removeFromLeft (50));
+
     statusLabel.setBounds (statusBounds);
+    processorControls->setBounds (bounds);
 }
 
 void MainComponent::timerCallback()
 {
     updateStatus();
+
+    if (engine.isRunning())
+    {
+        displayedInputLevel = std::max (engine.consumeInputPeak(), displayedInputLevel * 0.75f);
+        displayedOutputLevel = std::max (engine.consumeOutputPeak(), displayedOutputLevel * 0.75f);
+
+        const auto clipCount = engine.getClipCount();
+
+        if (clipCount != lastClipCount)
+        {
+            lastClipCount = clipCount;
+            lastClipTime = juce::Time::getCurrentTime();
+        }
+
+        const bool clippingActive = juce::Time::getCurrentTime() - lastClipTime
+                                      < juce::RelativeTime::milliseconds (1200);
+        outputMeter.setClipping (clippingActive);
+    }
+    else
+    {
+        engine.consumeInputPeak();
+        engine.consumeOutputPeak();
+
+        displayedInputLevel = 0.0f;
+        displayedOutputLevel = 0.0f;
+        outputMeter.setClipping (false);
+    }
+
+    inputMeter.setLevel (displayedInputLevel);
+    outputMeter.setLevel (displayedOutputLevel);
 }
 
 void MainComponent::refreshDevices()

@@ -36,6 +36,12 @@ public:
     double getMaxCallbackTimeMs() const noexcept { return maxCallbackTimeMs.load(); }
     int getXRunCount() const noexcept { return xruns.load(); }
 
+    float getInputPeak() const noexcept { return inputPeak.load(); }
+    float getOutputPeak() const noexcept { return outputPeak.load(); }
+    float consumeInputPeak() noexcept { return inputPeak.exchange (0.0f); }
+    float consumeOutputPeak() noexcept { return outputPeak.exchange (0.0f); }
+    int getClipCount() const noexcept { return clipCounter.load(); }
+
     AudioGraph& getAudioGraph() noexcept { return audioGraph; }
 
     juce::String startRecording (const juce::File& file);
@@ -67,6 +73,9 @@ private:
     std::atomic<double> totalCallbackTimeMs { 0.0 };
     std::atomic<double> maxCallbackTimeMs { 0.0 };
     std::atomic<int> xruns { 0 };
+    std::atomic<float> inputPeak { 0.0f };
+    std::atomic<float> outputPeak { 0.0f };
+    std::atomic<int> clipCounter { 0 };
 
     juce::AudioIODevice* currentDevice = nullptr;
     int callbacksSinceXRunCheck = 0;

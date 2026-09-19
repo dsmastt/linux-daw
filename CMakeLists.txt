@@ -30,6 +30,7 @@ target_sources(linux-daw PRIVATE
     src/GainProcessor.cpp
     src/MainComponent.cpp
     src/MainWindow.cpp
+    src/MeterComponent.cpp
     src/NoiseGateProcessor.cpp
     src/ParametricEqProcessor.cpp
     src/PlaybackProcessor.cpp

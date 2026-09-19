@@ -7,7 +7,8 @@ namespace daw
 {
 namespace
 {
-void updateMax (std::atomic<double>& target, double value)
+template <typename ValueType>
+void updateMax (std::atomic<ValueType>& target, ValueType value)
 {
     auto current = target.load (std::memory_order_relaxed);
 
@@ -90,6 +91,15 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
 
     recorder.recordBlock (inputChannelData, numInputChannelsIn, numSamples);
 
+    float inputPeakThisBlock = 0.0f;
+
+    for (int i = 0; i < numInputChannelsIn; ++i)
+        if (inputChannelData[i] != nullptr)
+            inputPeakThisBlock = std::max (inputPeakThisBlock,
+                                           juce::FloatVectorOperations::findMinAndMax (inputChannelData[i], numSamples).getEnd());
+
+    updateMax (inputPeak, inputPeakThisBlock);
+
     const int channelsToCopy = std::min (numInputChannelsIn, numOutputChannelsIn);
 
     for (int i = 0; i < channelsToCopy; ++i)
@@ -101,6 +111,18 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
             juce::FloatVectorOperations::clear (outputChannelData[i], numSamples);
 
     audioGraph.process (outputChannelData, numOutputChannelsIn, numSamples);
+
+    float outputPeakThisBlock = 0.0f;
+
+    for (int i = 0; i < numOutputChannelsIn; ++i)
+        if (outputChannelData[i] != nullptr)
+            outputPeakThisBlock = std::max (outputPeakThisBlock,
+                                            juce::FloatVectorOperations::findMinAndMax (outputChannelData[i], numSamples).getEnd());
+
+    updateMax (outputPeak, outputPeakThisBlock);
+
+    if (outputPeakThisBlock >= 0.999f)
+        clipCounter.fetch_add (1, std::memory_order_relaxed);
 
     const auto elapsedMs = std::chrono::duration<double, std::milli> (std::chrono::steady_clock::now() - startTime).count();
 

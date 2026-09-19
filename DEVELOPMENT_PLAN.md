@@ -735,6 +735,8 @@ Add DSP controls
 
 ## Milestone 20 - Level Meters
 
+**Status:** Completed
+
 Add:
 
 * input meter
@@ -1343,11 +1345,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 20 - Level Meters
+## Milestone 21 - VST3 Host Foundation
 
-DSP controls are exposed in the GUI for gain, gate, EQ, compressor, distortion, IR, and reverb, communicating with the audio thread through lock-free atomic parameters.
+Input/output meters with peak detection and a clipping indicator work through lock-free atomic communication.
 
-The next task is to add input/output level meters with peak detection and a clipping indicator, using lock-free communication from the audio thread.
+The next task is to prepare the engine to host external VST3 plugins: discover, load, process audio through, and unload them safely.
 
 Do not skip ahead.
 
