@@ -99,11 +99,13 @@ MainComponent::MainComponent()
     mixer = std::make_unique<MixerComponent> (engine.getAudioGraph());
     timeline = std::make_unique<TimelineComponent> (engine);
     midi = std::make_unique<MidiComponent> (engine);
+    automation = std::make_unique<AutomationComponent> (engine);
 
     viewTabs.addTab ("DSP", juce::Colours::darkgrey, processorControls.get(), false);
     viewTabs.addTab ("Mixer", juce::Colours::darkgrey, mixer.get(), false);
     viewTabs.addTab ("Timeline", juce::Colours::darkgrey, timeline.get(), false);
     viewTabs.addTab ("MIDI", juce::Colours::darkgrey, midi.get(), false);
+    viewTabs.addTab ("Automation", juce::Colours::darkgrey, automation.get(), false);
     addAndMakeVisible (viewTabs);
 
     addAndMakeVisible (inputMeter);

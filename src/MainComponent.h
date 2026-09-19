@@ -4,6 +4,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "AudioEngine.h"
+#include "AutomationComponent.h"
 #include "MeterComponent.h"
 #include "MidiComponent.h"
 #include "MixerComponent.h"
@@ -50,6 +51,7 @@ private:
     std::unique_ptr<MixerComponent> mixer;
     std::unique_ptr<TimelineComponent> timeline;
     std::unique_ptr<MidiComponent> midi;
+    std::unique_ptr<AutomationComponent> automation;
     MeterComponent inputMeter;
     MeterComponent outputMeter;
     juce::TextEditor statusLabel;

@@ -94,6 +94,9 @@ bool Track::isSoloed() const noexcept
 
 void Track::setGainDb (float gainDb) noexcept
 {
+    gainDbBase = gainDb;
+    gainAutomationDb = 0.0f;
+
     if (gainProcessor != nullptr)
         gainProcessor->setGainDb (gainDb);
 }
@@ -369,6 +372,181 @@ void Track::clearMidiEvents() noexcept
     midiEventCount.store (0, std::memory_order_release);
 }
 
+void Track::addAutomationPoint (AutomationParameter parameter, int pluginParameterIndex,
+                                std::int64_t timeSamples, float value) noexcept
+{
+    const int count = automationCurveCount.load (std::memory_order_relaxed);
+
+    int curveIndex = -1;
+
+    for (int i = 0; i < count; ++i)
+    {
+        const auto& curve = automationCurves[static_cast<size_t> (i)];
+
+        if (curve.parameter == parameter && curve.pluginParameterIndex == pluginParameterIndex)
+        {
+            curveIndex = i;
+            break;
+        }
+    }
+
+    if (curveIndex < 0)
+    {
+        if (count >= maxAutomationCurvesPerTrack)
+            return;
+
+        curveIndex = count;
+
+        auto& curve = automationCurves[static_cast<size_t> (curveIndex)];
+        curve.parameter = parameter;
+        curve.pluginParameterIndex = pluginParameterIndex;
+        curve.pointCount.store (0, std::memory_order_relaxed);
+
+        automationCurveCount.store (count + 1, std::memory_order_release);
+    }
+
+    auto& curve = automationCurves[static_cast<size_t> (curveIndex)];
+    const int pointCount = curve.pointCount.load (std::memory_order_relaxed);
+
+    if (pointCount >= maxAutomationPointsPerCurve)
+        return;
+
+    int insertAt = pointCount;
+
+    for (int i = 0; i < pointCount; ++i)
+    {
+        if (curve.points[static_cast<size_t> (i)].timeSamples.load (std::memory_order_relaxed) > timeSamples)
+        {
+            insertAt = i;
+            break;
+        }
+    }
+
+    for (int i = pointCount; i > insertAt; --i)
+    {
+        curve.points[static_cast<size_t> (i)].timeSamples.store (curve.points[static_cast<size_t> (i - 1)].timeSamples.load(), std::memory_order_relaxed);
+        curve.points[static_cast<size_t> (i)].value.store (curve.points[static_cast<size_t> (i - 1)].value.load(), std::memory_order_relaxed);
+    }
+
+    curve.points[static_cast<size_t> (insertAt)].timeSamples.store (timeSamples, std::memory_order_relaxed);
+    curve.points[static_cast<size_t> (insertAt)].value.store (value, std::memory_order_relaxed);
+
+    curve.pointCount.store (pointCount + 1, std::memory_order_release);
+}
+
+void Track::clearAutomation (AutomationParameter parameter, int pluginParameterIndex) noexcept
+{
+    const int count = automationCurveCount.load (std::memory_order_relaxed);
+
+    for (int i = 0; i < count; ++i)
+    {
+        const auto& curve = automationCurves[static_cast<size_t> (i)];
+
+        if (curve.parameter != parameter || curve.pluginParameterIndex != pluginParameterIndex)
+            continue;
+
+        for (int j = i; j < count - 1; ++j)
+        {
+            auto& target = automationCurves[static_cast<size_t> (j)];
+            const auto& source = automationCurves[static_cast<size_t> (j + 1)];
+
+            target.parameter = source.parameter;
+            target.pluginParameterIndex = source.pluginParameterIndex;
+            target.pointCount.store (source.pointCount.load(), std::memory_order_relaxed);
+
+            const int sourcePoints = source.pointCount.load (std::memory_order_relaxed);
+
+            for (int k = 0; k < sourcePoints; ++k)
+            {
+                target.points[static_cast<size_t> (k)].timeSamples.store (source.points[static_cast<size_t> (k)].timeSamples.load(), std::memory_order_relaxed);
+                target.points[static_cast<size_t> (k)].value.store (source.points[static_cast<size_t> (k)].value.load(), std::memory_order_relaxed);
+            }
+        }
+
+        automationCurveCount.store (count - 1, std::memory_order_release);
+        return;
+    }
+}
+
+void Track::applyAutomation (std::int64_t transportPositionSamples) noexcept
+{
+    const int numCurves = automationCurveCount.load (std::memory_order_acquire);
+
+    for (int curveIndex = 0; curveIndex < numCurves; ++curveIndex)
+    {
+        auto& curve = automationCurves[static_cast<size_t> (curveIndex)];
+        const int count = curve.pointCount.load (std::memory_order_acquire);
+
+        if (count == 0)
+            continue;
+
+        float value = 0.0f;
+
+        if (count == 1)
+        {
+            value = curve.points[0].value.load (std::memory_order_relaxed);
+        }
+        else
+        {
+            int& hint = automationSearchIndex[curveIndex];
+
+            if (hint > count - 2)
+                hint = count - 2;
+
+            if (hint < 0)
+                hint = 0;
+
+            while (hint > 0 && curve.points[static_cast<size_t> (hint)].timeSamples.load (std::memory_order_relaxed) > transportPositionSamples)
+                --hint;
+
+            while (hint < count - 2 && curve.points[static_cast<size_t> (hint + 1)].timeSamples.load (std::memory_order_relaxed) < transportPositionSamples)
+                ++hint;
+
+            const auto t0 = curve.points[static_cast<size_t> (hint)].timeSamples.load (std::memory_order_relaxed);
+            const auto t1 = curve.points[static_cast<size_t> (hint + 1)].timeSamples.load (std::memory_order_relaxed);
+            const auto v0 = curve.points[static_cast<size_t> (hint)].value.load (std::memory_order_relaxed);
+            const auto v1 = curve.points[static_cast<size_t> (hint + 1)].value.load (std::memory_order_relaxed);
+
+            if (transportPositionSamples <= t0)
+                value = v0;
+            else if (transportPositionSamples >= t1)
+                value = v1;
+            else
+                value = v0 + (v1 - v0) * static_cast<float> (transportPositionSamples - t0) / static_cast<float> (t1 - t0);
+        }
+
+        switch (curve.parameter)
+        {
+            case AutomationParameter::trackVolumeDb:
+                volumeAutomationDb = value;
+                break;
+
+            case AutomationParameter::trackPan:
+                panAutomation = value;
+                break;
+
+            case AutomationParameter::gainDb:
+                gainAutomationDb = value;
+
+                if (gainProcessor != nullptr)
+                    gainProcessor->setGainDb (gainDbBase + value);
+                break;
+
+            case AutomationParameter::pluginParameter:
+            {
+                auto* instance = getVst3PluginInstance();
+
+                if (instance != nullptr && curve.pluginParameterIndex >= 0
+                    && curve.pluginParameterIndex < instance->getParameters().size())
+                {
+                    instance->getParameters().getUnchecked (curve.pluginParameterIndex)->setValue (value);
+                }
+                break;
+            }
+        }
+    }
+}
+
 void Track::prepare (double sampleRate, int bufferSize) noexcept
 {
     numChannels = maxChannels;
@@ -398,6 +576,9 @@ void Track::process (const float* const* input,
 
     const int channels = std::min (numChannelsIn, maxChannels);
     const int frames = std::min (numSamples, maxBlockFrames);
+
+    if (transportPlaying)
+        applyAutomation (transportPositionSamples);
 
     for (int channel = 0; channel < channels; ++channel)
     {
@@ -469,8 +650,9 @@ void Track::process (const float* const* input,
         }
     }
 
-    const float volume = volumeLinear.load (std::memory_order_relaxed);
-    const float pan = panValue.load (std::memory_order_relaxed);
+    const float volume = volumeLinear.load (std::memory_order_relaxed)
+                           * std::pow (10.0f, volumeAutomationDb * 0.05f);
+    const float pan = std::clamp (panValue.load (std::memory_order_relaxed) + panAutomation, -1.0f, 1.0f);
 
     constexpr float piOverFour = 3.14159265358979323846f / 4.0f;
     const float leftGain = volume * std::cos ((pan + 1.0f) * piOverFour);

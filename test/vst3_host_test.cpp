@@ -353,6 +353,47 @@ int runTest (const juce::ArgumentList& args)
 
     const bool clipsOk = clipPeak > 0.2f && movedPeak > 0.2f && resizedPeak > 0.2f;
 
+    // Automation test: ramp track volume from 0 dB to -60 dB over 0.5 s.
+    graph.getTrack (0).moveClip (0, 0);
+    graph.getTrack (0).resizeClip (0, 96000);
+
+    graph.getTrack (0).addAutomationPoint (daw::AutomationParameter::trackVolumeDb, -1, 0, 0.0f);
+    graph.getTrack (0).addAutomationPoint (daw::AutomationParameter::trackVolumeDb, -1, 24000, -60.0f);
+
+    graph.playTransport();
+    juce::Thread::sleep (400);
+    const float earlyAutomationPeak = engine.consumeOutputPeak();
+    juce::Thread::sleep (600);
+    const float lateAutomationPeak = engine.consumeOutputPeak();
+    graph.stopTransport();
+
+    std::cout << "Automation peaks: early " << earlyAutomationPeak << ", late " << lateAutomationPeak << std::endl;
+
+    const auto volumeAutomationOk = earlyAutomationPeak > 0.2f && lateAutomationPeak < 0.05f;
+
+    // Plugin parameter automation: ramp plugin parameter 0 from 0.0 to 1.0.
+    graph.getTrack (0).clearMidiEvents();
+    graph.getTrack (0).addAutomationPoint (daw::AutomationParameter::pluginParameter, 0, 0, 0.0f);
+    graph.getTrack (0).addAutomationPoint (daw::AutomationParameter::pluginParameter, 0, 24000, 1.0f);
+
+    graph.playTransport();
+    juce::Thread::sleep (1000);
+    graph.stopTransport();
+
+    float pluginAutomationValue = 0.0f;
+
+    if (auto* instance = graph.getVst3PluginInstance())
+    {
+        const auto& parameters = instance->getParameters();
+
+        if (!parameters.isEmpty())
+            pluginAutomationValue = parameters.getUnchecked (0)->getValue();
+    }
+
+    std::cout << "Plugin parameter after automation: " << pluginAutomationValue << std::endl;
+
+    const auto pluginAutomationOk = std::abs (pluginAutomationValue - 1.0f) < 0.01f;
+
     // MIDI round-trip test via virtual devices.
     const auto midiOpenError = engine.openVirtualMidiDevice ("linux-daw-test-midi");
 
@@ -396,7 +437,8 @@ int runTest (const juce::ArgumentList& args)
 
     engine.closeMidiDevice();
 
-    if (callbacks == 0 || xruns != 0 || !transportOk || !clipsOk || !midiOk || !midiTrackOk)
+    if (callbacks == 0 || xruns != 0 || !transportOk || !clipsOk || !midiOk || !midiTrackOk
+        || !volumeAutomationOk || !pluginAutomationOk)
     {
         std::cout << "VST3 host test FAILED" << std::endl;
         return 1;

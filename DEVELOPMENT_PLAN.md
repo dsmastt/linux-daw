@@ -984,6 +984,8 @@ Add MIDI tracks
 
 ## Milestone 29 - Parameter Automation
 
+**Status:** Completed
+
 Support automation of parameters such as:
 
 * volume
@@ -1361,11 +1363,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 29 - Parameter Automation
+## Milestone 30 - Project Format
 
-MIDI data exists on tracks: timestamped events are emitted to plugins during playback, verified end-to-end.
+Automation works: volume, pan, DSP, and plugin parameters follow transport-driven curves, verified numerically.
 
-The next task is to support automation of parameters: volume, pan, DSP parameters, and plugin parameters, driven by the transport.
+The next task is to create a project format containing tracks, clips, plugin state, DSP parameters, automation, routing, and project metadata, avoiding absolute paths where possible.
 
 Do not skip ahead.
 

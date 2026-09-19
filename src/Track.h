@@ -6,6 +6,7 @@
 
 #include <juce_core/juce_core.h>
 
+#include "Automation.h"
 #include "Clip.h"
 #include "DistortionShaper.h"
 #include "MidiClip.h"
@@ -100,6 +101,12 @@ public:
     int getNumMidiEvents() const noexcept { return midiEventCount.load(); }
     const MidiEventRecord& getMidiEvent (int eventIndex) const noexcept { return midiEvents[static_cast<size_t> (eventIndex)]; }
 
+    void addAutomationPoint (AutomationParameter parameter, int pluginParameterIndex,
+                             std::int64_t timeSamples, float value) noexcept;
+    void clearAutomation (AutomationParameter parameter, int pluginParameterIndex = -1) noexcept;
+    int getNumAutomationCurves() const noexcept { return automationCurveCount.load(); }
+    const AutomationCurve& getAutomationCurve (int curveIndex) const noexcept { return automationCurves[static_cast<size_t> (curveIndex)]; }
+
     void prepare (double sampleRate, int bufferSize) noexcept;
     void reset() noexcept;
 
@@ -116,6 +123,8 @@ public:
 private:
     static constexpr int maxChannels = 2;
     static constexpr int maxBlockFrames = 2048;
+
+    void applyAutomation (std::int64_t transportPositionSamples) noexcept;
 
     ProcessorChain chain;
     GainProcessor* gainProcessor = nullptr;
@@ -141,5 +150,14 @@ private:
 
     MidiEventRecord midiEvents[maxMidiEventsPerTrack];
     std::atomic<int> midiEventCount { 0 };
+
+    AutomationCurve automationCurves[maxAutomationCurvesPerTrack];
+    std::atomic<int> automationCurveCount { 0 };
+    int automationSearchIndex[maxAutomationCurvesPerTrack] = {};
+
+    float volumeAutomationDb = 0.0f;
+    float panAutomation = 0.0f;
+    float gainAutomationDb = 0.0f;
+    float gainDbBase = 0.0f;
 };
 } // namespace daw
