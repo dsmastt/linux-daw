@@ -95,7 +95,6 @@ juce_add_console_app(linux-daw-vst3-test
     COMPANY_NAME "linux-daw"
     NEEDS_WEB_BROWSER FALSE
     NEEDS_CURL FALSE)
-
 target_sources(linux-daw-vst3-test PRIVATE
     test/vst3_host_test.cpp
     ${CORE_SOURCES})
@@ -112,4 +111,28 @@ target_compile_definitions(linux-daw-vst3-test PRIVATE
 
 target_link_libraries(linux-daw-vst3-test
     PRIVATE juce::juce_core juce::juce_events juce::juce_audio_devices juce::juce_audio_formats juce::juce_dsp juce::juce_audio_processors asound fftw3f
+    PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
+
+juce_add_console_app(linux-daw-tests
+    PRODUCT_NAME "linux-daw-tests"
+    COMPANY_NAME "linux-daw"
+    NEEDS_WEB_BROWSER FALSE
+    NEEDS_CURL FALSE)
+
+target_sources(linux-daw-tests PRIVATE
+    test/unit_tests.cpp
+    ${CORE_SOURCES})
+
+target_include_directories(linux-daw-tests PRIVATE src)
+
+target_compile_features(linux-daw-tests PRIVATE cxx_std_20)
+
+target_compile_definitions(linux-daw-tests PRIVATE
+    JUCE_WEB_BROWSER=0
+    JUCE_USE_CURL=0
+    JUCE_PLUGINHOST_VST3=1
+    JUCE_DSP_USE_SHARED_FFTW=1)
+
+target_link_libraries(linux-daw-tests
+    PRIVATE juce::juce_core juce::juce_events juce::juce_audio_devices juce::juce_audio_formats juce::juce_dsp juce::juce_audio_processors fftw3f
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
