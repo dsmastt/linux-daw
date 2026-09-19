@@ -147,6 +147,19 @@ int runAudioEngine (const juce::ArgumentList& args)
     if (const auto value = args.getValueForOption ("--dist-mode"); value.isNotEmpty())
         distMode = value.getIntValue();
 
+    float reverbWetDry = 0.2f;
+    float reverbDecay = 0.5f;
+    float reverbSize = 0.5f;
+
+    if (const auto value = args.getValueForOption ("--reverb-wet-dry"); value.isNotEmpty())
+        reverbWetDry = value.getFloatValue();
+
+    if (const auto value = args.getValueForOption ("--reverb-decay"); value.isNotEmpty())
+        reverbDecay = value.getFloatValue();
+
+    if (const auto value = args.getValueForOption ("--reverb-size"); value.isNotEmpty())
+        reverbSize = value.getFloatValue();
+
     std::cout << "Input device:  " << inputDeviceName << std::endl;
     std::cout << "Output device: " << outputDeviceName << std::endl;
     std::cout << "Requested sample rate: " << static_cast<int> (sampleRate) << std::endl;
@@ -190,6 +203,13 @@ int runAudioEngine (const juce::ArgumentList& args)
     engine.setDistortionDriveDb (distDriveDb);
     engine.setDistortionTone (distTone);
     engine.setDistortionMode (static_cast<daw::DistortionMode> (distMode));
+
+    engine.setReverbWetDry (reverbWetDry);
+    engine.setReverbDecay (reverbDecay);
+    engine.setReverbSize (reverbSize);
+
+    std::cout << "Reverb: wet/dry " << reverbWetDry << ", decay " << reverbDecay
+              << ", size " << reverbSize << std::endl;
 
     std::cout << "Distortion: mode " << distMode << ", drive " << distDriveDb
               << " dB, tone " << distTone << std::endl;

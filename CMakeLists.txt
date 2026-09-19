@@ -29,7 +29,8 @@ target_sources(linux-daw PRIVATE
     src/GainProcessor.cpp
     src/NoiseGateProcessor.cpp
     src/ParametricEqProcessor.cpp
-    src/ProcessorChain.cpp)
+    src/ProcessorChain.cpp
+    src/ReverbProcessor.cpp)
 
 target_compile_features(linux-daw PRIVATE cxx_std_20)
 

@@ -16,6 +16,7 @@ class DistortionProcessor;
 class GainProcessor;
 class NoiseGateProcessor;
 class ParametricEqProcessor;
+class ReverbProcessor;
 
 class AudioEngine final : public juce::AudioIODeviceCallback
 {
@@ -57,6 +58,10 @@ public:
     void clearImpulseResponse() noexcept;
     bool hasImpulseResponse() const noexcept;
     int getImpulseResponseLength() const noexcept;
+
+    void setReverbWetDry (float wetDry) noexcept;
+    void setReverbDecay (float decay) noexcept;
+    void setReverbSize (float size) noexcept;
 
     int getNumProcessors() const noexcept { return processorChain.size(); }
 
@@ -106,5 +111,6 @@ private:
     CompressorProcessor* compressorProcessor = nullptr;
     DistortionProcessor* distortionProcessor = nullptr;
     ConvolutionProcessor* convolutionProcessor = nullptr;
+    ReverbProcessor* reverbProcessor = nullptr;
 };
 } // namespace daw

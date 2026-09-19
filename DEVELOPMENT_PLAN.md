@@ -523,6 +523,8 @@ Add impulse response processor
 
 ## Milestone 14 - Reverb
 
+**Status:** Completed
+
 Add a real-time reverb processor.
 
 ### Requirements
@@ -1331,11 +1333,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 14 - Reverb
+## Milestone 15 - Separate Engine and DSP
 
-Impulse response convolution works: WAV IRs load off the audio thread, get resampled to the device rate, and are convolved in real time with partitioned FFT processing.
+The reverb works as the seventh chain element with wet/dry, decay, and size controls.
 
-The next task is to add a real-time reverb processor with wet/dry, decay, and size parameters.
+The next task is to refactor the architecture into clear layers: the audio engine handles device I/O and callback scheduling only, while a dedicated audio graph owns the DSP chain and all processor parameters.
 
 Do not skip ahead.
 

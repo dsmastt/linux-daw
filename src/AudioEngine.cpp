@@ -9,6 +9,7 @@
 #include "GainProcessor.h"
 #include "NoiseGateProcessor.h"
 #include "ParametricEqProcessor.h"
+#include "ReverbProcessor.h"
 
 namespace daw
 {
@@ -49,6 +50,10 @@ AudioEngine::AudioEngine()
     auto convolution = std::make_unique<ConvolutionProcessor>();
     convolutionProcessor = convolution.get();
     processorChain.append (std::move (convolution));
+
+    auto reverb = std::make_unique<ReverbProcessor>();
+    reverbProcessor = reverb.get();
+    processorChain.append (std::move (reverb));
 }
 
 AudioEngine::~AudioEngine()
@@ -181,6 +186,24 @@ bool AudioEngine::hasImpulseResponse() const noexcept
 int AudioEngine::getImpulseResponseLength() const noexcept
 {
     return convolutionProcessor != nullptr ? convolutionProcessor->getImpulseResponseLength() : 0;
+}
+
+void AudioEngine::setReverbWetDry (float wetDry) noexcept
+{
+    if (reverbProcessor != nullptr)
+        reverbProcessor->setWetDry (wetDry);
+}
+
+void AudioEngine::setReverbDecay (float decay) noexcept
+{
+    if (reverbProcessor != nullptr)
+        reverbProcessor->setDecay (decay);
+}
+
+void AudioEngine::setReverbSize (float size) noexcept
+{
+    if (reverbProcessor != nullptr)
+        reverbProcessor->setSize (size);
 }
 
 juce::String AudioEngine::start (const juce::String& inputDeviceName,
