@@ -92,6 +92,36 @@ bool Track::isSoloed() const noexcept
     return soloed.load();
 }
 
+void Track::setRouteTarget (int busIndex) noexcept
+{
+    routeTarget.store (busIndex < 0 || busIndex >= numBuses ? -1 : busIndex, std::memory_order_relaxed);
+}
+
+int Track::getRouteTarget() const noexcept
+{
+    return routeTarget.load();
+}
+
+void Track::setSendTarget (int busIndex) noexcept
+{
+    sendTarget.store (busIndex < 0 || busIndex >= numBuses ? -1 : busIndex, std::memory_order_relaxed);
+}
+
+int Track::getSendTarget() const noexcept
+{
+    return sendTarget.load();
+}
+
+void Track::setSendAmount (float amount) noexcept
+{
+    sendAmount.store (std::clamp (amount, 0.0f, 1.0f), std::memory_order_relaxed);
+}
+
+float Track::getSendAmount() const noexcept
+{
+    return sendAmount.load();
+}
+
 void Track::setGainDb (float gainDb) noexcept
 {
     gainDbBase = gainDb;
@@ -676,8 +706,10 @@ void Track::process (const float* const* input,
                      std::int64_t transportPositionSamples,
                      const ClipSource& clipSource,
                      juce::MidiBuffer& midiEventsOut,
-                     bool transportPlaying) noexcept
+                     bool transportPlaying,
+                     const RoutingBuffers& routing) noexcept
 {
+    juce::ignoreUnused (output);
     if (isMuted() || (anyTrackSoloed && !isSoloed()))
         return;
 
@@ -765,12 +797,18 @@ void Track::process (const float* const* input,
     const float leftGain = volume * std::cos ((pan + 1.0f) * piOverFour);
     const float rightGain = volume * std::sin ((pan + 1.0f) * piOverFour);
 
+    const int routeIndex = routeTarget.load (std::memory_order_relaxed);
+    const bool routeToBus = routeIndex >= 0 && routeIndex < numBuses;
+    float* mixTargets[maxChannels] = {};
+    mixTargets[0] = routeToBus ? routing.buses[routeIndex][0] : routing.master[0];
+    mixTargets[1] = routeToBus ? routing.buses[routeIndex][1] : routing.master[1];
+
     if (channels >= 2)
     {
         for (int frame = 0; frame < frames; ++frame)
         {
-            output[0][frame] += scratchPointers[0][frame] * leftGain;
-            output[1][frame] += scratchPointers[1][frame] * rightGain;
+            mixTargets[0][frame] += scratchPointers[0][frame] * leftGain;
+            mixTargets[1][frame] += scratchPointers[1][frame] * rightGain;
         }
     }
     else if (channels == 1)
@@ -778,8 +816,24 @@ void Track::process (const float* const* input,
         for (int frame = 0; frame < frames; ++frame)
         {
             const float sample = scratchPointers[0][frame] * volume;
-            output[0][frame] += sample * (1.0f - pan) * 0.5f;
-            output[1][frame] += sample * (pan + 1.0f) * 0.5f;
+            mixTargets[0][frame] += sample * (1.0f - pan) * 0.5f;
+            mixTargets[1][frame] += sample * (pan + 1.0f) * 0.5f;
+        }
+    }
+
+    const int sendIndex = sendTarget.load (std::memory_order_relaxed);
+    const float sendGain = sendAmount.load (std::memory_order_relaxed);
+
+    if (sendIndex >= 0 && sendIndex < numBuses && sendGain > 0.0f)
+    {
+        const float sendScale = sendGain * volume;
+
+        for (int channel = 0; channel < channels; ++channel)
+        {
+            auto* sendBuffer = routing.buses[sendIndex][channel];
+
+            for (int frame = 0; frame < frames; ++frame)
+                sendBuffer[frame] += scratchPointers[channel][frame] * sendScale;
         }
     }
 }

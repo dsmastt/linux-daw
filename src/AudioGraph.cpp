@@ -135,6 +135,9 @@ void AudioGraph::prepare (double sampleRate, int bufferSize) noexcept
     for (auto& track : tracks)
         track->prepare (sampleRate, bufferSize);
 
+    for (auto& busBuffer : busBuffers)
+        busBuffer.assign (static_cast<size_t> (maxChannels), std::vector<float> (maxBlockFrames, 0.0f));
+
     playbackProcessor->prepare (sampleRate, bufferSize);
 }
 
@@ -142,6 +145,10 @@ void AudioGraph::reset() noexcept
 {
     for (auto& track : tracks)
         track->reset();
+
+    for (auto& busBuffer : busBuffers)
+        for (auto& channel : busBuffer)
+            std::fill (channel.begin(), channel.end(), 0.0f);
 
     playbackProcessor->reset();
 }
@@ -168,6 +175,23 @@ void AudioGraph::processWithInput (const float* const* inputChannels,
 
     const bool transportPlaying = transport.isPlaying();
 
+    RoutingBuffers routing {};
+    routing.master[0] = outputChannels[0];
+    routing.master[1] = numChannels > 1 ? outputChannels[1] : nullptr;
+
+    float* busPointers[numBuses][maxChannels] = {};
+
+    for (int bus = 0; bus < numBuses; ++bus)
+    {
+        for (int channel = 0; channel < maxChannels && channel < numChannels; ++channel)
+        {
+            auto& busBuffer = busBuffers[bus][static_cast<size_t> (channel)];
+            std::fill (busBuffer.begin(), busBuffer.begin() + numSamples, 0.0f);
+            busPointers[bus][channel] = busBuffer.data();
+            routing.buses[bus][channel] = busBuffer.data();
+        }
+    }
+
     for (int i = 0; i < numTracks; ++i)
         tracks[static_cast<size_t> (i)]->process (i == 0 ? inputChannels : nullptr,
                                                   outputChannels,
@@ -179,7 +203,15 @@ void AudioGraph::processWithInput (const float* const* inputChannels,
                                                                playbackProcessor->getPreparedFrames(),
                                                                playbackProcessor->getPreparedChannels() },
                                                   midiEvents,
-                                                  transportPlaying);
+                                                  transportPlaying,
+                                                  routing);
+
+    for (int bus = 0; bus < numBuses; ++bus)
+        for (int channel = 0; channel < numChannels; ++channel)
+            if (busPointers[bus][channel] != nullptr && outputChannels[channel] != nullptr)
+                juce::FloatVectorOperations::add (outputChannels[channel],
+                                                  busPointers[bus][channel],
+                                                  numSamples);
 
     playbackProcessor->process (outputChannels, numChannels, numSamples);
 }

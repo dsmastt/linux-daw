@@ -1166,6 +1166,8 @@ Add waveform rendering
 
 ## Milestone 36 - Audio Routing
 
+**Status:** Completed
+
 Support:
 
 ```text
@@ -1375,11 +1377,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 36 - Audio Routing
+## Milestone 37 - Latency Optimization
 
-Waveform generation works: clip waveforms render from a background-generated peak cache with zooming.
+Audio routing works: tracks route to the master or buses with post-fader sends, verified numerically.
 
-The next task is to support audio routing: tracks routing to buses, sends, and the master.
+The next task is to measure and optimize latency: input latency, processing latency, output latency, buffer size, callback scheduling, DSP overhead, and unnecessary copies.
 
 Do not skip ahead.
 

@@ -27,6 +27,11 @@ private:
     juce::Slider volumeSlider;
     juce::Label panLabel;
     juce::Slider panSlider;
+    juce::Label routeLabel;
+    juce::ComboBox routeCombo;
+    juce::Label sendLabel;
+    juce::ComboBox sendCombo;
+    juce::Slider sendSlider;
     juce::ToggleButton muteButton;
     juce::ToggleButton soloButton;
 };

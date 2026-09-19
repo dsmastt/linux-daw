@@ -20,6 +20,16 @@ struct PluginDescription;
 
 namespace daw
 {
+constexpr int numBuses = 2;
+constexpr int maxChannels = 2;
+constexpr int maxBlockFrames = 2048;
+
+struct RoutingBuffers
+{
+    float* master[maxChannels] = {};
+    float* buses[numBuses][maxChannels] = {};
+};
+
 class CompressorProcessor;
 class ConvolutionProcessor;
 class DistortionProcessor;
@@ -43,6 +53,13 @@ public:
     bool isMuted() const noexcept;
     void setSoloed (bool shouldBeSoloed) noexcept;
     bool isSoloed() const noexcept;
+
+    void setRouteTarget (int busIndex) noexcept;
+    int getRouteTarget() const noexcept;
+    void setSendTarget (int busIndex) noexcept;
+    int getSendTarget() const noexcept;
+    void setSendAmount (float amount) noexcept;
+    float getSendAmount() const noexcept;
 
     void setGainDb (float gainDb) noexcept;
     float getGainDb() const noexcept;
@@ -141,12 +158,10 @@ public:
                   std::int64_t transportPositionSamples,
                   const ClipSource& clipSource,
                   juce::MidiBuffer& midiEvents,
-                  bool transportPlaying) noexcept;
+                  bool transportPlaying,
+                  const RoutingBuffers& routing) noexcept;
 
 private:
-    static constexpr int maxChannels = 2;
-    static constexpr int maxBlockFrames = 2048;
-
     void applyAutomation (std::int64_t transportPositionSamples) noexcept;
 
     ProcessorChain chain;
@@ -164,6 +179,10 @@ private:
     std::atomic<float> panValue { 0.0f };
     std::atomic<bool> muted { false };
     std::atomic<bool> soloed { false };
+
+    std::atomic<int> routeTarget { -1 };
+    std::atomic<int> sendTarget { -1 };
+    std::atomic<float> sendAmount { 0.0f };
 
     std::vector<std::vector<float>> scratch;
     int numChannels = 0;

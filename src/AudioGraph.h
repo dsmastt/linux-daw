@@ -127,5 +127,6 @@ private:
     std::vector<std::unique_ptr<Track>> tracks;
     std::unique_ptr<PlaybackProcessor> playbackProcessor;
     Transport transport;
+    std::vector<std::vector<float>> busBuffers[numBuses];
 };
 } // namespace daw

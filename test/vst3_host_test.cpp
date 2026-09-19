@@ -499,6 +499,51 @@ int runTest (const juce::ArgumentList& args)
 
     std::cout << "Undo/redo " << (undoOk1 && undoOk2 && redoOk ? "passed" : "FAILED") << std::endl;
 
+    // Routing test: route track 0 to Bus 1 and verify audio reaches the master via the bus.
+    engine.stop();
+    const auto restartError = engine.start (inputDeviceName, outputDeviceName, 48000.0, 128);
+
+    if (restartError.isNotEmpty())
+    {
+        std::cout << "Engine restart failed: " << restartError << std::endl;
+        return 1;
+    }
+
+    juce::Thread::sleep (300);
+    std::cout << "DBG routing phase: prepFrames=" << graph.getPlaybackLengthFrames() << std::endl;
+
+    engine.consumeOutputPeak();
+
+    graph.getTrack (0).setRouteTarget (0);
+    graph.getTransport().stop();
+    graph.playTransport();
+    juce::Thread::sleep (1000);
+    const float busRoutedPeak = engine.consumeOutputPeak();
+    graph.stopTransport();
+
+    std::cout << "Output peak with track routed through bus: " << busRoutedPeak << std::endl;
+
+    const auto routingOk = busRoutedPeak > 0.2f;
+
+    // Send test: route back to master with a send to bus 1.
+    engine.consumeOutputPeak();
+
+    graph.getTrack (0).setRouteTarget (-1);
+    graph.getTrack (0).setSendTarget (0);
+    graph.getTrack (0).setSendAmount (0.5f);
+    graph.getTransport().stop();
+    graph.playTransport();
+    juce::Thread::sleep (1000);
+    const float sendPeak = engine.consumeOutputPeak();
+    graph.stopTransport();
+
+    std::cout << "Output peak with 50% send to bus: " << sendPeak << std::endl;
+
+    const auto sendOk = sendPeak > 0.2f && std::abs (sendPeak - 0.60355f) < 0.05f;
+
+    graph.getTrack (0).setSendTarget (-1);
+    graph.getTrack (0).setSendAmount (0.0f);
+
     // Performance profiling report.
     const auto& profilingTrack = graph.getTrack (0);
 
@@ -564,7 +609,7 @@ int runTest (const juce::ArgumentList& args)
 
     if (callbacks == 0 || xruns != 0 || !transportOk || !clipsOk || !midiOk || !midiTrackOk
         || !volumeAutomationOk || !pluginAutomationOk || !roundTripOk || !undoOk1 || !undoOk2 || !redoOk
-        || !profilingOk || !irPreparedOk)
+        || !profilingOk || !irPreparedOk || !routingOk || !sendOk)
     {
         std::cout << "VST3 host test FAILED" << std::endl;
         return 1;

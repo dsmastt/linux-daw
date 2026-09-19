@@ -117,6 +117,9 @@ juce::var Project::trackToVar (const Track& track)
     trackObject->setProperty ("pan", track.getPan());
     trackObject->setProperty ("muted", track.isMuted());
     trackObject->setProperty ("soloed", track.isSoloed());
+    trackObject->setProperty ("routeTarget", track.getRouteTarget());
+    trackObject->setProperty ("sendTarget", track.getSendTarget());
+    trackObject->setProperty ("sendAmount", track.getSendAmount());
 
     trackObject->setProperty ("gainDb", track.getGainDb());
 
@@ -299,6 +302,9 @@ juce::String Project::applyTrack (const juce::var& trackVar, Track& track, doubl
     track.setPan (static_cast<float> (readNumber (trackVar, "pan", 0.0)));
     track.setMuted (readBool (trackVar, "muted", false));
     track.setSoloed (readBool (trackVar, "soloed", false));
+    track.setRouteTarget (static_cast<int> (readNumber (trackVar, "routeTarget", -1.0)));
+    track.setSendTarget (static_cast<int> (readNumber (trackVar, "sendTarget", -1.0)));
+    track.setSendAmount (static_cast<float> (readNumber (trackVar, "sendAmount", 0.0)));
 
     track.setGainDb (static_cast<float> (readNumber (trackVar, "gainDb", 0.0)));
 

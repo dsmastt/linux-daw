@@ -61,6 +61,50 @@ ChannelStripComponent::ChannelStripComponent (Track& trackToUse, const juce::Str
     };
     addAndMakeVisible (panSlider);
 
+    routeLabel.setText ("Route", juce::dontSendNotification);
+    routeLabel.setJustificationType (juce::Justification::centred);
+    addAndMakeVisible (routeLabel);
+
+    routeCombo.addItem ("Master", 1);
+    routeCombo.addItem ("Bus 1", 2);
+    routeCombo.addItem ("Bus 2", 3);
+    routeCombo.setSelectedItemIndex (track.getRouteTarget() < 0 ? 0 : track.getRouteTarget() + 1);
+    routeCombo.onChange = [this]
+    {
+        undo.captureUndoState (graph);
+        track.setRouteTarget (routeCombo.getSelectedItemIndex() - 1);
+    };
+    addAndMakeVisible (routeCombo);
+
+    sendLabel.setText ("Send", juce::dontSendNotification);
+    sendLabel.setJustificationType (juce::Justification::centred);
+    addAndMakeVisible (sendLabel);
+
+    sendCombo.addItem ("None", 1);
+    sendCombo.addItem ("Bus 1", 2);
+    sendCombo.addItem ("Bus 2", 3);
+    sendCombo.setSelectedItemIndex (track.getSendTarget() < 0 ? 0 : track.getSendTarget() + 1);
+    sendCombo.onChange = [this]
+    {
+        undo.captureUndoState (graph);
+        track.setSendTarget (sendCombo.getSelectedItemIndex() - 1);
+    };
+    addAndMakeVisible (sendCombo);
+
+    sendSlider.setSliderStyle (juce::Slider::LinearHorizontal);
+    sendSlider.setRange (0.0, 1.0, 0.01);
+    sendSlider.setValue (track.getSendAmount(), juce::dontSendNotification);
+    sendSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 56, 20);
+    sendSlider.onDragStart = [this]
+    {
+        undo.captureUndoState (graph);
+    };
+    sendSlider.onValueChange = [this]
+    {
+        track.setSendAmount (static_cast<float> (sendSlider.getValue()));
+    };
+    addAndMakeVisible (sendSlider);
+
     muteButton.setButtonText ("M");
     muteButton.setToggleState (track.isMuted(), juce::dontSendNotification);
     muteButton.onClick = [this]
@@ -89,10 +133,21 @@ void ChannelStripComponent::resized()
     bounds.removeFromTop (6);
 
     volumeLabel.setBounds (bounds.removeFromTop (20));
-    volumeSlider.setBounds (bounds.removeFromTop (bounds.getHeight() - 92));
+    volumeSlider.setBounds (bounds.removeFromTop (bounds.getHeight() - 236));
 
     panLabel.setBounds (bounds.removeFromTop (20));
     panSlider.setBounds (bounds.removeFromTop (40));
+
+    bounds.removeFromTop (6);
+
+    routeLabel.setBounds (bounds.removeFromTop (20));
+    routeCombo.setBounds (bounds.removeFromTop (28));
+
+    bounds.removeFromTop (4);
+
+    sendLabel.setBounds (bounds.removeFromTop (20));
+    sendCombo.setBounds (bounds.removeFromTop (28));
+    sendSlider.setBounds (bounds.removeFromTop (40));
 
     bounds.removeFromTop (6);
 
