@@ -31,6 +31,7 @@ target_sources(linux-daw PRIVATE
     src/GainProcessor.cpp
     src/NoiseGateProcessor.cpp
     src/ParametricEqProcessor.cpp
+    src/PlaybackProcessor.cpp
     src/ProcessorChain.cpp
     src/ReverbProcessor.cpp)
 

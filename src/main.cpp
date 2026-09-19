@@ -239,6 +239,29 @@ int runAudioEngine (const juce::ArgumentList& args)
     if (const auto value = args.getValueForOption ("--record"); value.isNotEmpty())
         recordPath = value;
 
+    juce::String playPath;
+    double seekSeconds = -1.0;
+
+    if (const auto value = args.getValueForOption ("--play"); value.isNotEmpty())
+        playPath = value;
+
+    if (const auto value = args.getValueForOption ("--seek"); value.isNotEmpty())
+        seekSeconds = value.getDoubleValue();
+
+    if (playPath.isNotEmpty())
+    {
+        const auto loadError = graph.loadPlaybackFile (juce::File (playPath));
+
+        if (loadError.isNotEmpty())
+        {
+            std::cout << "Failed to load playback file: " << loadError << std::endl;
+            return 1;
+        }
+
+        if (seekSeconds >= 0.0)
+            graph.setPlaybackPositionSeconds (seekSeconds);
+    }
+
     const auto error = engine.start (inputDeviceName, outputDeviceName, sampleRate, bufferSize);
 
     if (error.isNotEmpty())
@@ -261,6 +284,19 @@ int runAudioEngine (const juce::ArgumentList& args)
         std::cout << "Recording to: " << recordPath << std::endl;
     }
 
+    if (playPath.isNotEmpty())
+    {
+        graph.playPlayback();
+
+        std::cout << "Playback file: " << playPath << " ("
+                  << graph.getPlaybackLengthSeconds() << " s)";
+
+        if (seekSeconds >= 0.0)
+            std::cout << ", seek " << seekSeconds << " s";
+
+        std::cout << std::endl;
+    }
+
     const auto totalLatencySamples = engine.getInputLatencySamples() + engine.getOutputLatencySamples();
     const auto latencyMs = (1000.0 * totalLatencySamples) / engine.getSampleRate();
 
@@ -274,7 +310,7 @@ int runAudioEngine (const juce::ArgumentList& args)
 
     const bool debug = args.containsOption ("--debug");
 
-    const auto reportStats = [&engine]
+    const auto reportStats = [&engine, &graph]
     {
         const auto callbacks = engine.getNumCallbacks();
         const auto avgCallbackMs = callbacks > 0 ? engine.getTotalCallbackTimeMs() / callbacks : 0.0;
@@ -283,7 +319,13 @@ int runAudioEngine (const juce::ArgumentList& args)
 
         std::cout << "Stats: callbacks " << callbacks
                   << ", avg " << avgCallbackMs << " ms, max " << engine.getMaxCallbackTimeMs()
-                  << " ms, audio thread duty " << duty << " %, xruns " << engine.getXRunCount() << std::endl;
+                  << " ms, audio thread duty " << duty << " %, xruns " << engine.getXRunCount();
+
+        if (graph.isPlaybackPlaying())
+            std::cout << ", playback " << graph.getPlaybackPositionSeconds()
+                      << " / " << graph.getPlaybackLengthSeconds() << " s";
+
+        std::cout << std::endl;
     };
 
     const auto deadline = durationSeconds > 0.0

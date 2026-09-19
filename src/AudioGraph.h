@@ -14,6 +14,7 @@ class DistortionProcessor;
 class GainProcessor;
 class NoiseGateProcessor;
 class ParametricEqProcessor;
+class PlaybackProcessor;
 class ReverbProcessor;
 
 class AudioGraph final : public AudioProcessor
@@ -54,6 +55,15 @@ public:
     void setReverbDecay (float decay) noexcept;
     void setReverbSize (float size) noexcept;
 
+    juce::String loadPlaybackFile (const juce::File& file);
+    void playPlayback() noexcept;
+    void pausePlayback() noexcept;
+    void stopPlayback() noexcept;
+    bool isPlaybackPlaying() const noexcept;
+    double getPlaybackPositionSeconds() const noexcept;
+    double getPlaybackLengthSeconds() const noexcept;
+    void setPlaybackPositionSeconds (double seconds) noexcept;
+
     int getNumProcessors() const noexcept { return chain.size(); }
 
     void prepare (double sampleRate, int bufferSize) noexcept override;
@@ -69,5 +79,6 @@ private:
     DistortionProcessor* distortionProcessor = nullptr;
     ConvolutionProcessor* convolutionProcessor = nullptr;
     ReverbProcessor* reverbProcessor = nullptr;
+    PlaybackProcessor* playbackProcessor = nullptr;
 };
 } // namespace daw

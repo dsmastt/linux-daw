@@ -637,6 +637,8 @@ Add audio recording
 
 ## Milestone 17 - Audio File Playback
 
+**Status:** Completed
+
 ### Goal
 
 Play recorded WAV files through the engine.
@@ -1337,11 +1339,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 17 - Audio File Playback
+## Milestone 18 - Basic GUI
 
-Recording works: input audio reaches a WAV file with correct rate and channel configuration via a producer/consumer design that never blocks the audio thread.
+Playback works: WAV files load, play, pause, stop, and seek with sample-rate handling, mixed into the engine output.
 
-The next task is to play recorded WAV files through the engine: load, play, pause, stop, seek, with sample-rate handling.
+The next task is to create a basic application interface with device selection, audio start/stop, and live sample-rate, buffer-size, and status displays.
 
 Do not skip ahead.
 

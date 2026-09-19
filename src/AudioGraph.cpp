@@ -8,6 +8,7 @@
 #include "GainProcessor.h"
 #include "NoiseGateProcessor.h"
 #include "ParametricEqProcessor.h"
+#include "PlaybackProcessor.h"
 #include "ReverbProcessor.h"
 
 namespace daw
@@ -41,6 +42,10 @@ AudioGraph::AudioGraph()
     auto reverb = std::make_unique<ReverbProcessor>();
     reverbProcessor = reverb.get();
     chain.append (std::move (reverb));
+
+    auto playback = std::make_unique<PlaybackProcessor>();
+    playbackProcessor = playback.get();
+    chain.append (std::move (playback));
 }
 
 AudioGraph::~AudioGraph() = default;
@@ -188,6 +193,53 @@ void AudioGraph::setReverbSize (float size) noexcept
 {
     if (reverbProcessor != nullptr)
         reverbProcessor->setSize (size);
+}
+
+juce::String AudioGraph::loadPlaybackFile (const juce::File& file)
+{
+    if (playbackProcessor == nullptr)
+        return "Playback processor unavailable";
+
+    return playbackProcessor->loadFile (file);
+}
+
+void AudioGraph::playPlayback() noexcept
+{
+    if (playbackProcessor != nullptr)
+        playbackProcessor->play();
+}
+
+void AudioGraph::pausePlayback() noexcept
+{
+    if (playbackProcessor != nullptr)
+        playbackProcessor->pause();
+}
+
+void AudioGraph::stopPlayback() noexcept
+{
+    if (playbackProcessor != nullptr)
+        playbackProcessor->stop();
+}
+
+bool AudioGraph::isPlaybackPlaying() const noexcept
+{
+    return playbackProcessor != nullptr && playbackProcessor->isPlaying();
+}
+
+double AudioGraph::getPlaybackPositionSeconds() const noexcept
+{
+    return playbackProcessor != nullptr ? playbackProcessor->getPositionSeconds() : 0.0;
+}
+
+double AudioGraph::getPlaybackLengthSeconds() const noexcept
+{
+    return playbackProcessor != nullptr ? playbackProcessor->getLengthSeconds() : 0.0;
+}
+
+void AudioGraph::setPlaybackPositionSeconds (double seconds) noexcept
+{
+    if (playbackProcessor != nullptr)
+        playbackProcessor->setPositionSeconds (seconds);
 }
 
 void AudioGraph::prepare (double sampleRate, int bufferSize) noexcept
