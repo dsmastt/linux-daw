@@ -4,6 +4,7 @@
 #include <chrono>
 
 #include "CompressorProcessor.h"
+#include "ConvolutionProcessor.h"
 #include "DistortionProcessor.h"
 #include "GainProcessor.h"
 #include "NoiseGateProcessor.h"
@@ -44,6 +45,10 @@ AudioEngine::AudioEngine()
     auto distortion = std::make_unique<DistortionProcessor>();
     distortionProcessor = distortion.get();
     processorChain.append (std::move (distortion));
+
+    auto convolution = std::make_unique<ConvolutionProcessor>();
+    convolutionProcessor = convolution.get();
+    processorChain.append (std::move (convolution));
 }
 
 AudioEngine::~AudioEngine()
@@ -152,6 +157,30 @@ void AudioEngine::setDistortionMode (DistortionMode mode) noexcept
 {
     if (distortionProcessor != nullptr)
         distortionProcessor->setMode (mode);
+}
+
+juce::String AudioEngine::loadImpulseResponse (const juce::File& file)
+{
+    if (convolutionProcessor == nullptr)
+        return "Convolution processor unavailable";
+
+    return convolutionProcessor->loadImpulseResponse (file);
+}
+
+void AudioEngine::clearImpulseResponse() noexcept
+{
+    if (convolutionProcessor != nullptr)
+        convolutionProcessor->clearImpulseResponse();
+}
+
+bool AudioEngine::hasImpulseResponse() const noexcept
+{
+    return convolutionProcessor != nullptr && convolutionProcessor->hasImpulseResponse();
+}
+
+int AudioEngine::getImpulseResponseLength() const noexcept
+{
+    return convolutionProcessor != nullptr ? convolutionProcessor->getImpulseResponseLength() : 0;
 }
 
 juce::String AudioEngine::start (const juce::String& inputDeviceName,

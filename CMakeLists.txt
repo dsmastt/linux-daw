@@ -24,6 +24,7 @@ target_sources(linux-daw PRIVATE
     src/AudioDeviceDiscovery.cpp
     src/AudioEngine.cpp
     src/CompressorProcessor.cpp
+    src/ConvolutionProcessor.cpp
     src/DistortionProcessor.cpp
     src/GainProcessor.cpp
     src/NoiseGateProcessor.cpp
@@ -37,5 +38,5 @@ target_compile_definitions(linux-daw PRIVATE
     JUCE_USE_CURL=0)
 
 target_link_libraries(linux-daw
-    PRIVATE juce::juce_core juce::juce_audio_devices
+    PRIVATE juce::juce_core juce::juce_audio_devices juce::juce_audio_formats juce::juce_dsp
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)

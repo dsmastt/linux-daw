@@ -11,6 +11,7 @@
 namespace daw
 {
 class CompressorProcessor;
+class ConvolutionProcessor;
 class DistortionProcessor;
 class GainProcessor;
 class NoiseGateProcessor;
@@ -51,6 +52,11 @@ public:
     void setDistortionDriveDb (float driveDb) noexcept;
     void setDistortionTone (float tone) noexcept;
     void setDistortionMode (DistortionMode mode) noexcept;
+
+    juce::String loadImpulseResponse (const juce::File& file);
+    void clearImpulseResponse() noexcept;
+    bool hasImpulseResponse() const noexcept;
+    int getImpulseResponseLength() const noexcept;
 
     int getNumProcessors() const noexcept { return processorChain.size(); }
 
@@ -99,5 +105,6 @@ private:
     ParametricEqProcessor* eqProcessor = nullptr;
     CompressorProcessor* compressorProcessor = nullptr;
     DistortionProcessor* distortionProcessor = nullptr;
+    ConvolutionProcessor* convolutionProcessor = nullptr;
 };
 } // namespace daw

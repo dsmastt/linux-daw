@@ -484,6 +484,8 @@ Add distortion processor
 
 ## Milestone 13 - Impulse Response Convolution
 
+**Status:** Completed
+
 ### Goal
 
 Support cabinet impulse responses.
@@ -1329,11 +1331,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 13 - Impulse Response Convolution
+## Milestone 14 - Reverb
 
-Distortion works with four selectable clipping algorithms, drive, and tone.
+Impulse response convolution works: WAV IRs load off the audio thread, get resampled to the device rate, and are convolved in real time with partitioned FFT processing.
 
-The next task is to support cabinet impulse responses: load WAV IRs off the audio thread and convolve in real time with an efficient partitioned FFT implementation.
+The next task is to add a real-time reverb processor with wet/dry, decay, and size parameters.
 
 Do not skip ahead.
 

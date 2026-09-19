@@ -194,6 +194,24 @@ int runAudioEngine (const juce::ArgumentList& args)
     std::cout << "Distortion: mode " << distMode << ", drive " << distDriveDb
               << " dB, tone " << distTone << std::endl;
 
+    juce::String irPath;
+
+    if (const auto value = args.getValueForOption ("--ir"); value.isNotEmpty())
+        irPath = value;
+
+    if (irPath.isNotEmpty())
+    {
+        const auto error = engine.loadImpulseResponse (juce::File (irPath));
+
+        if (error.isNotEmpty())
+        {
+            std::cout << "Failed to load impulse response: " << error << std::endl;
+            return 1;
+        }
+
+        std::cout << "IR: " << irPath << " (" << engine.getImpulseResponseLength() << " samples)" << std::endl;
+    }
+
     const auto error = engine.start (inputDeviceName, outputDeviceName, sampleRate, bufferSize);
 
     if (error.isNotEmpty())
