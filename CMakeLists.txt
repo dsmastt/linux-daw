@@ -19,7 +19,9 @@ juce_add_console_app(linux-daw
     NEEDS_WEB_BROWSER FALSE
     NEEDS_CURL FALSE)
 
-target_sources(linux-daw PRIVATE src/main.cpp)
+target_sources(linux-daw PRIVATE
+    src/main.cpp
+    src/AudioDeviceDiscovery.cpp)
 
 target_compile_features(linux-daw PRIVATE cxx_std_20)
 
@@ -28,5 +30,5 @@ target_compile_definitions(linux-daw PRIVATE
     JUCE_USE_CURL=0)
 
 target_link_libraries(linux-daw
-    PRIVATE juce::juce_core
+    PRIVATE juce::juce_core juce::juce_audio_devices
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)

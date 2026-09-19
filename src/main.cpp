@@ -2,6 +2,8 @@
 
 #include <juce_core/juce_core.h>
 
+#include "AudioDeviceDiscovery.h"
+
 int main (int argc, char* argv[])
 {
     juce::ConsoleApplication app;
@@ -16,6 +18,7 @@ int main (int argc, char* argv[])
                              [] (const juce::ArgumentList&)
                              {
                                  std::cout << "Application started." << std::endl;
+                                 daw::printAudioDevices();
                              }});
 
     return app.findAndRunCommand (argc, argv);

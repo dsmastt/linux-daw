@@ -134,6 +134,8 @@ Integrate JUCE
 
 ## Milestone 3 - Enumerate Audio Devices
 
+**Status:** Completed
+
 ### Goal
 
 Discover the audio devices available to the application.
@@ -1309,11 +1311,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 3 - Enumerate Audio Devices
+## Milestone 4 - Create AudioEngine
 
-JUCE is integrated and the project builds a working console application.
+Audio device discovery works and identifies the AI-04.
 
-The next task is to discover and print the audio devices available to the application.
+The next task is to create a dedicated `AudioEngine` abstraction that can open a device, configure sample rate and buffer size, and start/stop audio with an empty callback.
 
 Do not skip ahead.
 
