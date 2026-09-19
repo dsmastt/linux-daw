@@ -21,7 +21,8 @@ juce_add_console_app(linux-daw
 
 target_sources(linux-daw PRIVATE
     src/main.cpp
-    src/AudioDeviceDiscovery.cpp)
+    src/AudioDeviceDiscovery.cpp
+    src/AudioEngine.cpp)
 
 target_compile_features(linux-daw PRIVATE cxx_std_20)
 
