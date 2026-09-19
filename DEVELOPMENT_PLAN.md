@@ -1339,6 +1339,8 @@ Add Linux release packaging
 
 ## Milestone 42 - First Usable Release
 
+**Status:** Completed
+
 Version 0.1 should be capable of:
 
 * opening an audio device
@@ -1387,13 +1389,8 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 42 - First Usable Release
-
-Packaging works: release and debug builds, installation rules, a desktop launcher, an application icon, and a user data directory.
-
-The next task is the first usable release: a version 0.1 build that can open an audio device, monitor audio, apply built-in DSP, record, play audio, use VST3 plugins, mix basic tracks, and save/load projects.
-
-Do not skip ahead.
+The initial roadmap is complete. Version 0.1 is implemented, tested, packaged,
+and documented. Future work belongs to the Future Features list below.
 
 ---
 
