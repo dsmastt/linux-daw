@@ -88,12 +88,20 @@ int runAudioEngine (const juce::ArgumentList& args)
     if (const auto value = args.getValueForOption ("--duration"); value.isNotEmpty())
         durationSeconds = value.getDoubleValue();
 
+    float gainDb = 0.0f;
+
+    if (const auto value = args.getValueForOption ("--gain-db"); value.isNotEmpty())
+        gainDb = value.getFloatValue();
+
     std::cout << "Input device:  " << inputDeviceName << std::endl;
     std::cout << "Output device: " << outputDeviceName << std::endl;
     std::cout << "Requested sample rate: " << static_cast<int> (sampleRate) << std::endl;
     std::cout << "Requested buffer size: " << bufferSize << std::endl;
+    std::cout << "Gain: " << gainDb << " dB" << std::endl;
 
     daw::AudioEngine engine;
+
+    engine.setGainDb (gainDb);
 
     const auto error = engine.start (inputDeviceName, outputDeviceName, sampleRate, bufferSize);
 

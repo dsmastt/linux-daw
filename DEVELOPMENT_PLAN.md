@@ -297,6 +297,8 @@ Add audio diagnostics
 
 ## Milestone 7 - Gain Processor
 
+**Status:** Completed
+
 ### Goal
 
 Introduce the first DSP processor.
@@ -1317,11 +1319,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 7 - Gain Processor
+## Milestone 8 - Processing Chain
 
-Diagnostics work: the app reports audio configuration, callback timing, audio-thread duty, and xruns.
+The gain processor works with lock-free parameter changes and smoothed, allocation-free processing.
 
-The next task is to introduce the first DSP processor: a gain stage with a parameter that can be changed safely from outside the audio thread, processed without allocations inside the audio callback.
+The next task is to stop hardcoding DSP into the audio callback: create a consistent processor interface and an ordered processing graph that the audio engine drives.
 
 Do not skip ahead.
 

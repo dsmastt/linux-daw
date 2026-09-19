@@ -81,6 +81,8 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
         if (outputChannelData[i] != nullptr)
             juce::FloatVectorOperations::clear (outputChannelData[i], numSamples);
 
+    gain.process (outputChannelData, numOutputChannelsIn, numSamples);
+
     const auto elapsedMs = std::chrono::duration<double, std::milli> (std::chrono::steady_clock::now() - startTime).count();
 
     numCallbacks.fetch_add (1, std::memory_order_relaxed);
@@ -105,6 +107,9 @@ void AudioEngine::audioDeviceAboutToStart (juce::AudioIODevice* device)
     outputLatencySamples.store (device->getOutputLatencyInSamples());
     numInputChannels.store (device->getActiveInputChannels().countNumberOfSetBits());
     numOutputChannels.store (device->getActiveOutputChannels().countNumberOfSetBits());
+
+    gain.setSampleRate (device->getCurrentSampleRate());
+    gain.reset();
 }
 
 void AudioEngine::audioDeviceStopped()
