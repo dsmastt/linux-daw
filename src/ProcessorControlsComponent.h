@@ -2,7 +2,9 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "AudioEngine.h"
 #include "AudioGraph.h"
+#include "Vst3HostProcessor.h"
 
 namespace daw
 {
@@ -25,7 +27,7 @@ public:
         juce::Label label;
     };
 
-    explicit ProcessorControlsComponent (AudioGraph& graph);
+    explicit ProcessorControlsComponent (AudioEngine& engine);
     ~ProcessorControlsComponent() override;
 
     void resized() override;
@@ -108,6 +110,38 @@ private:
         std::vector<std::unique_ptr<SliderRow>> rows;
     };
 
+    class PluginTab final : public juce::Component
+    {
+    public:
+        explicit PluginTab (AudioEngine& engine);
+        ~PluginTab() override;
+        void resized() override;
+
+    private:
+        class EditorWindow;
+
+        void rescanPlugins();
+        void loadSelectedPlugin();
+        void removePlugin();
+        void rebuildParameterSliders();
+        void openEditor();
+
+        AudioEngine& engine;
+        AudioGraph& graph;
+        juce::TextButton rescanButton;
+        juce::ComboBox pluginCombo;
+        juce::TextButton loadButton;
+        juce::TextButton removeButton;
+        juce::ToggleButton bypassButton;
+        juce::TextButton editorButton;
+        juce::TextEditor statusText;
+        juce::Component parameterPanel;
+        std::vector<juce::Slider*> parameterSliders;
+        std::vector<juce::Label*> parameterLabels;
+        std::vector<juce::PluginDescription> scannedPlugins;
+        std::unique_ptr<EditorWindow> editorWindow;
+    };
+
     juce::TabbedComponent tabs;
     GainTab gainTab;
     GateTab gateTab;
@@ -116,5 +150,6 @@ private:
     DistortionTab distortionTab;
     CabinetTab cabinetTab;
     ReverbTab reverbTab;
+    PluginTab pluginTab;
 };
 } // namespace daw

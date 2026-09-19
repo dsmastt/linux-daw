@@ -802,6 +802,8 @@ Add VST3 plugin hosting
 
 ## Milestone 22 - Plugin Management
 
+**Status:** Completed
+
 Add:
 
 * plugin browser
@@ -1347,11 +1349,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 22 - Plugin Management
+## Milestone 23 - Track Model
 
-VST3 hosting works: plugins are discovered, loaded, processed in the chain, and unloaded safely, verified end-to-end with a built-in test plugin.
+Plugin management works: the GUI can browse, load, remove, bypass, and control plugins, with editor windows where supported, verified end-to-end with the built-in test plugin.
 
-The next task is to add plugin management: a plugin browser, loading, removal, bypass, parameter interaction, and editor windows where supported.
+The next task is to introduce tracks: each with a volume, pan, mute, solo, DSP chain, and plugin chain, mixed down to a master.
 
 Do not skip ahead.
 

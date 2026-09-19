@@ -266,15 +266,16 @@ void ProcessorControlsComponent::ReverbTab::resized()
 }
 
 //==============================================================================
-ProcessorControlsComponent::ProcessorControlsComponent (AudioGraph& graph)
+ProcessorControlsComponent::ProcessorControlsComponent (AudioEngine& engineToUse)
     : tabs (juce::TabbedButtonBar::TabsAtTop),
-      gainTab (graph),
-      gateTab (graph),
-      eqTab (graph),
-      compressorTab (graph),
-      distortionTab (graph),
-      cabinetTab (graph),
-      reverbTab (graph)
+      gainTab (engineToUse.getAudioGraph()),
+      gateTab (engineToUse.getAudioGraph()),
+      eqTab (engineToUse.getAudioGraph()),
+      compressorTab (engineToUse.getAudioGraph()),
+      distortionTab (engineToUse.getAudioGraph()),
+      cabinetTab (engineToUse.getAudioGraph()),
+      reverbTab (engineToUse.getAudioGraph()),
+      pluginTab (engineToUse)
 {
     addAndMakeVisible (tabs);
 
@@ -285,6 +286,7 @@ ProcessorControlsComponent::ProcessorControlsComponent (AudioGraph& graph)
     tabs.addTab ("Distortion", juce::Colours::darkgrey, &distortionTab, false);
     tabs.addTab ("Cabinet", juce::Colours::darkgrey, &cabinetTab, false);
     tabs.addTab ("Reverb", juce::Colours::darkgrey, &reverbTab, false);
+    tabs.addTab ("Plugin", juce::Colours::darkgrey, &pluginTab, false);
 }
 
 ProcessorControlsComponent::~ProcessorControlsComponent() = default;
@@ -303,5 +305,245 @@ void ProcessorControlsComponent::layoutRows (juce::Component& parent, const std:
         row->setBounds (bounds.removeFromTop (54));
         bounds.removeFromTop (4);
     }
+}
+
+//==============================================================================
+class ProcessorControlsComponent::PluginTab::EditorWindow final : public juce::DocumentWindow
+{
+public:
+    EditorWindow (const juce::String& name, juce::Component* content)
+        : juce::DocumentWindow (name,
+                                juce::Desktop::getInstance().getDefaultLookAndFeel()
+                                    .findColour (juce::ResizableWindow::backgroundColourId),
+                                juce::DocumentWindow::closeButton,
+                                false)
+    {
+        setUsingNativeTitleBar (true);
+        setContentOwned (content, true);
+        setResizable (true, false);
+        setSize (content->getWidth(), content->getHeight() + getTitleBarHeight());
+        setVisible (true);
+    }
+
+    void closeButtonPressed() override
+    {
+        setVisible (false);
+    }
+};
+
+//==============================================================================
+ProcessorControlsComponent::PluginTab::PluginTab (AudioEngine& engineToUse)
+    : engine (engineToUse),
+      graph (engineToUse.getAudioGraph())
+{
+    rescanButton.setButtonText ("Rescan");
+    rescanButton.onClick = [this] { rescanPlugins(); };
+    addAndMakeVisible (rescanButton);
+
+    addAndMakeVisible (pluginCombo);
+
+    loadButton.setButtonText ("Load");
+    loadButton.onClick = [this] { loadSelectedPlugin(); };
+    addAndMakeVisible (loadButton);
+
+    removeButton.setButtonText ("Remove");
+    removeButton.setEnabled (false);
+    removeButton.onClick = [this] { removePlugin(); };
+    addAndMakeVisible (removeButton);
+
+    bypassButton.setButtonText ("Bypass");
+    bypassButton.setEnabled (false);
+    bypassButton.onClick = [this] { graph.setVst3PluginBypassed (bypassButton.getToggleState()); };
+    addAndMakeVisible (bypassButton);
+
+    editorButton.setButtonText ("Editor...");
+    editorButton.setEnabled (false);
+    editorButton.onClick = [this] { openEditor(); };
+    addAndMakeVisible (editorButton);
+
+    statusText.setMultiLine (true, false);
+    statusText.setReadOnly (true);
+    statusText.setCaretVisible (false);
+    statusText.setText ("No plugin loaded", juce::dontSendNotification);
+    addAndMakeVisible (statusText);
+
+    addAndMakeVisible (parameterPanel);
+
+    rescanPlugins();
+}
+
+ProcessorControlsComponent::PluginTab::~PluginTab()
+{
+    editorWindow.reset();
+    graph.unloadVst3Plugin();
+}
+
+void ProcessorControlsComponent::PluginTab::resized()
+{
+    auto bounds = getLocalBounds().reduced (10);
+
+    auto row = bounds.removeFromTop (30);
+    rescanButton.setBounds (row.removeFromLeft (80));
+    row.removeFromLeft (8);
+    pluginCombo.setBounds (row);
+
+    bounds.removeFromTop (8);
+
+    row = bounds.removeFromTop (30);
+    loadButton.setBounds (row.removeFromLeft (80));
+    row.removeFromLeft (8);
+    removeButton.setBounds (row.removeFromLeft (80));
+    row.removeFromLeft (8);
+    bypassButton.setBounds (row.removeFromLeft (80));
+    row.removeFromLeft (8);
+    editorButton.setBounds (row.removeFromLeft (80));
+
+    bounds.removeFromTop (8);
+
+    statusText.setBounds (bounds.removeFromTop (56));
+
+    bounds.removeFromTop (8);
+
+    parameterPanel.setBounds (bounds);
+
+    auto parameterBounds = parameterPanel.getLocalBounds();
+
+    for (size_t i = 0; i < parameterSliders.size(); ++i)
+    {
+        auto parameterRow = parameterBounds.removeFromTop (28);
+        parameterLabels[i]->setBounds (parameterRow.removeFromLeft (180));
+        parameterSliders[i]->setBounds (parameterRow);
+    }
+}
+
+void ProcessorControlsComponent::PluginTab::rescanPlugins()
+{
+    juce::StringArray paths;
+    paths.add (juce::File::getSpecialLocation (juce::File::userHomeDirectory).getChildFile (".vst3").getFullPathName());
+    paths.add ("/usr/lib/vst3");
+    paths.add ("/usr/local/lib/vst3");
+    paths.add ("build/linux-daw-test-plugin_artefacts/VST3");
+
+    scannedPlugins = scanVst3Plugins (paths);
+
+    pluginCombo.clear();
+
+    for (const auto& plugin : scannedPlugins)
+        pluginCombo.addItem (plugin.name, pluginCombo.getNumItems() + 1);
+
+    statusText.setText ("Found " + juce::String (scannedPlugins.size()) + " VST3 plugins", juce::dontSendNotification);
+}
+
+void ProcessorControlsComponent::PluginTab::loadSelectedPlugin()
+{
+    const int index = pluginCombo.getSelectedItemIndex();
+
+    if (index < 0 || index >= static_cast<int> (scannedPlugins.size()))
+    {
+        statusText.setText ("No plugin selected", juce::dontSendNotification);
+        return;
+    }
+
+    const double rate = engine.isRunning() ? engine.getSampleRate() : 48000.0;
+    const int buffer = engine.isRunning() ? engine.getBufferSize() : 128;
+
+    const auto error = graph.loadVst3Plugin (scannedPlugins[static_cast<size_t> (index)], rate, buffer);
+
+    if (error.isNotEmpty())
+    {
+        statusText.setText ("Error: " + error, juce::dontSendNotification);
+        return;
+    }
+
+    statusText.setText ("Loaded: " + graph.getVst3PluginName(), juce::dontSendNotification);
+
+    removeButton.setEnabled (true);
+    bypassButton.setEnabled (true);
+    bypassButton.setToggleState (false, juce::dontSendNotification);
+
+    const auto* instance = graph.getVst3PluginInstance();
+    editorButton.setEnabled (instance != nullptr && instance->hasEditor());
+
+    rebuildParameterSliders();
+}
+
+void ProcessorControlsComponent::PluginTab::removePlugin()
+{
+    editorWindow.reset();
+    graph.unloadVst3Plugin();
+
+    statusText.setText ("No plugin loaded", juce::dontSendNotification);
+
+    removeButton.setEnabled (false);
+    bypassButton.setEnabled (false);
+    bypassButton.setToggleState (false, juce::dontSendNotification);
+    editorButton.setEnabled (false);
+
+    parameterPanel.removeAllChildren();
+    parameterSliders.clear();
+    parameterLabels.clear();
+}
+
+void ProcessorControlsComponent::PluginTab::rebuildParameterSliders()
+{
+    parameterPanel.removeAllChildren();
+    parameterSliders.clear();
+    parameterLabels.clear();
+
+    auto* instance = graph.getVst3PluginInstance();
+
+    if (instance == nullptr)
+        return;
+
+    const auto& parameters = instance->getParameters();
+
+    for (auto* parameter : parameters)
+    {
+        if (parameter == nullptr || !parameter->isAutomatable())
+            continue;
+
+        auto* label = new juce::Label (parameter->getName (64), parameter->getName (64));
+        parameterLabels.push_back (label);
+        parameterPanel.addAndMakeVisible (label);
+
+        auto* slider = new juce::Slider (juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight);
+        slider->setRange (0.0, 1.0, 0.001);
+        slider->setValue (parameter->getValue(), juce::dontSendNotification);
+        slider->setTextBoxStyle (juce::Slider::TextBoxRight, false, 56, 22);
+        slider->onValueChange = [parameter, slider]
+        {
+            parameter->setValue (static_cast<float> (slider->getValue()));
+        };
+
+        parameterSliders.push_back (slider);
+        parameterPanel.addAndMakeVisible (slider);
+    }
+
+    resized();
+}
+
+void ProcessorControlsComponent::PluginTab::openEditor()
+{
+    auto* instance = graph.getVst3PluginInstance();
+
+    if (instance == nullptr)
+        return;
+
+    if (editorWindow != nullptr)
+    {
+        editorWindow->setVisible (true);
+        editorWindow->toFront (true);
+        return;
+    }
+
+    auto* editor = instance->createEditorAndMakeActive();
+
+    if (editor == nullptr)
+    {
+        statusText.setText ("Plugin has no editor", juce::dontSendNotification);
+        return;
+    }
+
+    editorWindow = std::make_unique<EditorWindow> (graph.getVst3PluginName(), editor);
 }
 } // namespace daw

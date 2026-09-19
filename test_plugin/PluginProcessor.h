@@ -7,7 +7,7 @@
 class TestPluginProcessor final : public juce::AudioProcessor
 {
 public:
-    TestPluginProcessor() = default;
+    TestPluginProcessor();
     ~TestPluginProcessor() override = default;
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
@@ -17,8 +17,10 @@ public:
 
     void processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
 
-    juce::AudioProcessorEditor* createEditor() override { return nullptr; }
-    bool hasEditor() const override { return false; }
+    using juce::AudioProcessor::processBlock;
+
+    juce::AudioProcessorEditor* createEditor() override;
+    bool hasEditor() const override { return true; }
 
     const juce::String getName() const override { return "Linux DAW Test Plugin"; }
 
@@ -36,8 +38,8 @@ public:
     void getStateInformation (juce::MemoryBlock&) override {}
     void setStateInformation (const void*, int) override {}
 
-    void setGain (float newGain) noexcept { gain.store (newGain); }
-
 private:
-    std::atomic<float> gain { 1.0f };
+    juce::AudioParameterFloat* gainParameter = nullptr;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TestPluginProcessor)
 };

@@ -8,6 +8,7 @@
 
 namespace juce
 {
+class AudioPluginInstance;
 struct PluginDescription;
 } // namespace juce
 
@@ -77,6 +78,9 @@ public:
     void unloadVst3Plugin() noexcept;
     bool isVst3PluginLoaded() const noexcept;
     juce::String getVst3PluginName() const noexcept;
+    void setVst3PluginBypassed (bool shouldBeBypassed) noexcept;
+    bool isVst3PluginBypassed() const noexcept;
+    juce::AudioPluginInstance* getVst3PluginInstance() const noexcept;
 
     int getNumProcessors() const noexcept { return chain.size(); }
 

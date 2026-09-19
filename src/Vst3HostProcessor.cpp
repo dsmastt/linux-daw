@@ -33,6 +33,7 @@ juce::String Vst3HostProcessor::loadPlugin (const juce::PluginDescription& descr
 void Vst3HostProcessor::unloadPlugin() noexcept
 {
     loaded.store (false, std::memory_order_release);
+    bypassed.store (false, std::memory_order_relaxed);
     instance.reset();
     pluginName.clear();
 }
@@ -57,7 +58,7 @@ void Vst3HostProcessor::reset() noexcept
 
 void Vst3HostProcessor::process (float* const* channels, int numChannels, int numSamples) noexcept
 {
-    if (!loaded.load() || instance == nullptr)
+    if (!loaded.load() || instance == nullptr || bypassed.load())
         return;
 
     pluginBuffer.setDataToReferTo (channels, numChannels, numSamples);

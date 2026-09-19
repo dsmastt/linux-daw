@@ -65,7 +65,7 @@ MainComponent::MainComponent()
     addAndMakeVisible (startButton);
     addAndMakeVisible (stopButton);
 
-    processorControls = std::make_unique<ProcessorControlsComponent> (engine.getAudioGraph());
+    processorControls = std::make_unique<ProcessorControlsComponent> (engine);
     addAndMakeVisible (*processorControls);
 
     addAndMakeVisible (inputMeter);

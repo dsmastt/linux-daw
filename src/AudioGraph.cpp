@@ -286,6 +286,22 @@ juce::String AudioGraph::getVst3PluginName() const noexcept
     return vst3Processor != nullptr ? vst3Processor->getPluginName() : juce::String();
 }
 
+void AudioGraph::setVst3PluginBypassed (bool shouldBeBypassed) noexcept
+{
+    if (vst3Processor != nullptr)
+        vst3Processor->setBypassed (shouldBeBypassed);
+}
+
+bool AudioGraph::isVst3PluginBypassed() const noexcept
+{
+    return vst3Processor != nullptr && vst3Processor->isBypassed();
+}
+
+juce::AudioPluginInstance* AudioGraph::getVst3PluginInstance() const noexcept
+{
+    return vst3Processor != nullptr ? vst3Processor->getInstance() : nullptr;
+}
+
 void AudioGraph::prepare (double sampleRate, int bufferSize) noexcept
 {
     chain.prepare (sampleRate, bufferSize);

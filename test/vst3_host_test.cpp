@@ -71,6 +71,22 @@ int runTest (const juce::ArgumentList& args)
 
     std::cout << "Loaded plugin: " << graph.getVst3PluginName() << std::endl;
 
+    if (auto* instance = graph.getVst3PluginInstance())
+    {
+        const auto& parameters = instance->getParameters();
+
+        if (!parameters.isEmpty())
+        {
+            parameters.getUnchecked (0)->setValue (0.25f);
+            std::cout << "Set parameter '" << parameters.getUnchecked (0)->getName (64)
+                      << "' to " << parameters.getUnchecked (0)->getValue() << std::endl;
+        }
+    }
+
+    graph.setVst3PluginBypassed (true);
+    std::cout << "Bypassed: " << (graph.isVst3PluginBypassed() ? "yes" : "no") << std::endl;
+    graph.setVst3PluginBypassed (false);
+
     juce::AudioDeviceManager deviceManager;
     juce::OwnedArray<juce::AudioIODeviceType> types;
     deviceManager.createAudioDeviceTypes (types);
