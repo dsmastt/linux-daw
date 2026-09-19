@@ -100,7 +100,8 @@ public:
     void processWithInput (const float* const* inputChannels,
                            float* const* outputChannels,
                            int numChannels,
-                           int numSamples) noexcept;
+                           int numSamples,
+                           juce::MidiBuffer& midiEvents) noexcept;
 
 private:
     std::vector<std::unique_ptr<Track>> tracks;

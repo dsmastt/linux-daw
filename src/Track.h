@@ -103,7 +103,8 @@ public:
                   int numSamples,
                   bool anyTrackSoloed,
                   std::int64_t transportPositionSamples,
-                  const ClipSource& clipSource) noexcept;
+                  const ClipSource& clipSource,
+                  juce::MidiBuffer& midiEvents) noexcept;
 
 private:
     static constexpr int maxChannels = 2;

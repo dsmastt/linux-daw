@@ -1,6 +1,10 @@
 #include <iostream>
 
 #include <cmath>
+#include <cstring>
+#include <unistd.h>
+
+#include <alsa/asoundlib.h>
 
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -13,6 +17,107 @@
 
 namespace
 {
+bool sendMidiViaAlsa (const char* deviceName)
+{
+    snd_seq_t* seq = nullptr;
+
+    if (snd_seq_open (&seq, "default", SND_SEQ_OPEN_DUPLEX, 0) < 0)
+        return false;
+
+    snd_seq_set_client_name (seq, "linux-daw-test-sender");
+
+    const int srcPort = snd_seq_create_simple_port (seq, "test-out",
+                                                    SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ,
+                                                    SND_SEQ_PORT_TYPE_APPLICATION);
+
+    if (srcPort < 0)
+    {
+        snd_seq_close (seq);
+        return false;
+    }
+
+    int dstClient = -1;
+    int dstPort = -1;
+
+    snd_seq_client_info_t* clientInfo = nullptr;
+    snd_seq_client_info_alloca (&clientInfo);
+    snd_seq_client_info_set_client (clientInfo, -1);
+
+    while (snd_seq_query_next_client (seq, clientInfo) >= 0)
+    {
+        const int client = snd_seq_client_info_get_client (clientInfo);
+
+        if (client == snd_seq_client_id (seq))
+            continue;
+
+        snd_seq_port_info_t* portInfo = nullptr;
+        snd_seq_port_info_alloca (&portInfo);
+        snd_seq_port_info_set_client (portInfo, client);
+        snd_seq_port_info_set_port (portInfo, -1);
+
+        while (snd_seq_query_next_port (seq, portInfo) >= 0)
+        {
+            const char* portName = snd_seq_port_info_get_name (portInfo);
+
+            if (portName != nullptr
+                && std::strcmp (portName, deviceName) == 0
+                && (snd_seq_port_info_get_capability (portInfo) & SND_SEQ_PORT_CAP_SUBS_WRITE))
+            {
+                dstClient = client;
+                dstPort = snd_seq_port_info_get_port (portInfo);
+                break;
+            }
+        }
+
+        if (dstClient >= 0)
+            break;
+    }
+
+    if (dstClient < 0)
+    {
+        snd_seq_close (seq);
+        return false;
+    }
+
+    snd_seq_connect_to (seq, srcPort, dstClient, dstPort);
+
+    const auto sendEvent = [&] (int type, int param1, int param2)
+    {
+        snd_seq_event_t ev;
+        snd_seq_ev_clear (&ev);
+
+        if (type == SND_SEQ_EVENT_CONTROLLER)
+        {
+            ev.type = SND_SEQ_EVENT_CONTROLLER;
+            ev.data.control.channel = 0;
+            ev.data.control.param = param1;
+            ev.data.control.value = param2;
+        }
+        else
+        {
+            ev.type = static_cast<unsigned char> (type);
+            ev.data.note.channel = 0;
+            ev.data.note.note = static_cast<unsigned char> (param1);
+            ev.data.note.velocity = static_cast<unsigned char> (param2);
+        }
+
+        snd_seq_ev_set_source (&ev, srcPort);
+        snd_seq_ev_set_subs (&ev);
+        snd_seq_ev_set_direct (&ev);
+        snd_seq_event_output (seq, &ev);
+        snd_seq_drain_output (seq);
+    };
+
+    sendEvent (SND_SEQ_EVENT_NOTEON, 60, 100);
+    usleep (50000);
+    sendEvent (SND_SEQ_EVENT_CONTROLLER, 7, 64);
+    usleep (50000);
+    sendEvent (SND_SEQ_EVENT_NOTEOFF, 60, 0);
+    usleep (50000);
+
+    snd_seq_close (seq);
+    return true;
+}
 juce::File createClipTestFile()
 {
     const auto file = juce::File ("/tmp/kilo/linux-daw-clip-test.wav");
@@ -226,7 +331,50 @@ int runTest (const juce::ArgumentList& args)
 
     const bool clipsOk = clipPeak > 0.2f && movedPeak > 0.2f && resizedPeak > 0.2f;
 
-    if (callbacks == 0 || xruns != 0 || !transportOk || !clipsOk)
+    // MIDI round-trip test via virtual devices.
+    const auto midiOpenError = engine.openVirtualMidiDevice ("linux-daw-test-midi");
+
+    if (midiOpenError.isNotEmpty())
+    {
+        std::cout << "Failed to open virtual MIDI input: " << midiOpenError << std::endl;
+        engine.stop();
+        graph.unloadVst3Plugin();
+        return 1;
+    }
+
+    std::cout << "Virtual MIDI input open" << std::endl;
+
+    if (!sendMidiViaAlsa ("linux-daw-test-midi"))
+    {
+        std::cout << "Failed to send MIDI via ALSA" << std::endl;
+        engine.stop();
+        graph.unloadVst3Plugin();
+        return 1;
+    }
+
+    std::cout << "MIDI events sent via ALSA" << std::endl;
+
+    juce::Thread::sleep (100);
+
+    const auto& midiHandler = engine.getMidiHandler();
+    const auto midiOk = midiHandler.getNoteOnCount() == 1
+                        && midiHandler.getNoteOffCount() == 1
+                        && midiHandler.getCcCount() == 1
+                        && midiHandler.getLastNoteNumber() == 60
+                        && midiHandler.getLastVelocity() == 100
+                        && midiHandler.getLastControllerNumber() == 7
+                        && midiHandler.getLastControllerValue() == 64;
+
+    std::cout << "MIDI: noteOns " << midiHandler.getNoteOnCount()
+              << ", noteOffs " << midiHandler.getNoteOffCount()
+              << ", ccs " << midiHandler.getCcCount()
+              << ", last note " << midiHandler.getLastNoteNumber()
+              << ", last cc " << midiHandler.getLastControllerNumber()
+              << "=" << midiHandler.getLastControllerValue() << std::endl;
+
+    engine.closeMidiDevice();
+
+    if (callbacks == 0 || xruns != 0 || !transportOk || !clipsOk || !midiOk)
     {
         std::cout << "VST3 host test FAILED" << std::endl;
         return 1;

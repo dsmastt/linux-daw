@@ -5,6 +5,7 @@
 
 #include "AudioEngine.h"
 #include "MeterComponent.h"
+#include "MidiComponent.h"
 #include "MixerComponent.h"
 #include "ProcessorControlsComponent.h"
 #include "TimelineComponent.h"
@@ -48,6 +49,7 @@ private:
     std::unique_ptr<ProcessorControlsComponent> processorControls;
     std::unique_ptr<MixerComponent> mixer;
     std::unique_ptr<TimelineComponent> timeline;
+    std::unique_ptr<MidiComponent> midi;
     MeterComponent inputMeter;
     MeterComponent outputMeter;
     juce::TextEditor statusLabel;

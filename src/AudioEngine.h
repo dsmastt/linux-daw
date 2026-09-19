@@ -7,6 +7,7 @@
 
 #include "AudioGraph.h"
 #include "AudioRecorder.h"
+#include "MidiInputHandler.h"
 
 namespace daw
 {
@@ -50,6 +51,12 @@ public:
     std::uint64_t getFramesWritten() const noexcept { return recorder.getFramesWritten(); }
     int getDroppedRecordingBlocks() const noexcept { return recorder.getDroppedBlocks(); }
 
+    juce::String openMidiDevice (const juce::String& identifier);
+    juce::String openVirtualMidiDevice (const juce::String& name);
+    void closeMidiDevice() noexcept;
+    bool isMidiDeviceOpen() const noexcept { return midiHandler.isOpen(); }
+    MidiInputHandler& getMidiHandler() noexcept { return midiHandler; }
+
 private:
     void audioDeviceIOCallbackWithContext (const float* const* inputChannelData,
                                            int numInputChannels,
@@ -81,5 +88,7 @@ private:
     int callbacksSinceXRunCheck = 0;
     AudioGraph audioGraph;
     AudioRecorder recorder;
+    MidiInputHandler midiHandler;
+    juce::MidiBuffer midiBuffer;
 };
 } // namespace daw

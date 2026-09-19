@@ -3,6 +3,8 @@
 #include <memory>
 #include <vector>
 
+#include <juce_audio_basics/juce_audio_basics.h>
+
 #include "AudioProcessor.h"
 
 namespace daw
@@ -17,6 +19,7 @@ public:
 
     void prepare (double sampleRate, int bufferSize) noexcept override;
     void process (float* const* channels, int numChannels, int numSamples) noexcept override;
+    void processWithMidi (float* const* channels, int numChannels, int numSamples, juce::MidiBuffer& midiEvents) noexcept override;
     void reset() noexcept override;
 
 private:

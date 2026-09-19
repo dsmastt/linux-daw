@@ -362,7 +362,8 @@ void Track::process (const float* const* input,
                      int numSamples,
                      bool anyTrackSoloed,
                      std::int64_t transportPositionSamples,
-                     const ClipSource& clipSource) noexcept
+                     const ClipSource& clipSource,
+                     juce::MidiBuffer& midiEvents) noexcept
 {
     if (isMuted() || (anyTrackSoloed && !isSoloed()))
         return;
@@ -384,7 +385,7 @@ void Track::process (const float* const* input,
     scratchPointers[0] = scratch[0].data();
     scratchPointers[1] = scratch[1].data();
 
-    chain.process (scratchPointers, channels, frames);
+    chain.processWithMidi (scratchPointers, channels, frames, midiEvents);
 
     const int numClips = clipCount.load (std::memory_order_acquire);
 

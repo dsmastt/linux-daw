@@ -67,6 +67,16 @@ void Vst3HostProcessor::process (float* const* channels, int numChannels, int nu
     instance->processBlock (pluginBuffer, midiBuffer);
 }
 
+void Vst3HostProcessor::processWithMidi (float* const* channels, int numChannels, int numSamples, juce::MidiBuffer& midiEvents) noexcept
+{
+    if (!loaded.load() || instance == nullptr || bypassed.load())
+        return;
+
+    pluginBuffer.setDataToReferTo (channels, numChannels, numSamples);
+
+    instance->processBlock (pluginBuffer, midiEvents);
+}
+
 std::vector<juce::PluginDescription> scanVst3Plugins (const juce::StringArray& paths)
 {
     std::vector<juce::PluginDescription> result;

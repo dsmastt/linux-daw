@@ -24,6 +24,12 @@ void ProcessorChain::process (float* const* channels, int numChannels, int numSa
         processor->process (channels, numChannels, numSamples);
 }
 
+void ProcessorChain::processWithMidi (float* const* channels, int numChannels, int numSamples, juce::MidiBuffer& midiEvents) noexcept
+{
+    for (const auto& processor : processors)
+        processor->processWithMidi (channels, numChannels, numSamples, midiEvents);
+}
+
 void ProcessorChain::reset() noexcept
 {
     for (const auto& processor : processors)

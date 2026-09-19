@@ -80,6 +80,21 @@ void AudioEngine::stopRecording()
     recorder.stopRecording();
 }
 
+juce::String AudioEngine::openMidiDevice (const juce::String& identifier)
+{
+    return midiHandler.openDevice (identifier);
+}
+
+juce::String AudioEngine::openVirtualMidiDevice (const juce::String& name)
+{
+    return midiHandler.openVirtualDevice (name);
+}
+
+void AudioEngine::closeMidiDevice() noexcept
+{
+    midiHandler.closeDevice();
+}
+
 void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputChannelData,
                                                     int numInputChannelsIn,
                                                     float* const* outputChannelData,
@@ -100,7 +115,10 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
 
     updateMax (inputPeak, inputPeakThisBlock);
 
-    audioGraph.processWithInput (inputChannelData, outputChannelData, numOutputChannelsIn, numSamples);
+    midiBuffer.clear();
+    midiHandler.drainInto (midiBuffer);
+
+    audioGraph.processWithInput (inputChannelData, outputChannelData, numOutputChannelsIn, numSamples, midiBuffer);
 
     float outputPeakThisBlock = 0.0f;
 
@@ -141,6 +159,8 @@ void AudioEngine::audioDeviceAboutToStart (juce::AudioIODevice* device)
 
     audioGraph.prepare (device->getCurrentSampleRate(), device->getCurrentBufferSizeSamples());
     audioGraph.reset();
+
+    midiBuffer.ensureSize (2048);
 }
 
 void AudioEngine::audioDeviceStopped()

@@ -118,7 +118,8 @@ void AudioGraph::reset() noexcept
 void AudioGraph::processWithInput (const float* const* inputChannels,
                                    float* const* outputChannels,
                                    int numChannels,
-                                   int numSamples) noexcept
+                                   int numSamples,
+                                   juce::MidiBuffer& midiEvents) noexcept
 {
     if (transport.isPlaying())
         transport.advance (numSamples);
@@ -141,7 +142,8 @@ void AudioGraph::processWithInput (const float* const* inputChannels,
                                                   transport.getPositionSamples(),
                                                   ClipSource { playbackProcessor->getPreparedData(),
                                                                playbackProcessor->getPreparedFrames(),
-                                                               playbackProcessor->getPreparedChannels() });
+                                                               playbackProcessor->getPreparedChannels() },
+                                                  midiEvents);
 
     playbackProcessor->process (outputChannels, numChannels, numSamples);
 }

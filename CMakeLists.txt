@@ -23,6 +23,7 @@ set(CORE_SOURCES
     src/ConvolutionProcessor.cpp
     src/DistortionProcessor.cpp
     src/GainProcessor.cpp
+    src/MidiInputHandler.cpp
     src/NoiseGateProcessor.cpp
     src/ParametricEqProcessor.cpp
     src/PlaybackProcessor.cpp
@@ -43,6 +44,7 @@ target_sources(linux-daw PRIVATE
     src/MainComponent.cpp
     src/MainWindow.cpp
     src/MeterComponent.cpp
+    src/MidiComponent.cpp
     src/MixerComponent.cpp
     src/ProcessorControlsComponent.cpp
     src/TimelineComponent.cpp
@@ -103,5 +105,5 @@ target_compile_definitions(linux-daw-vst3-test PRIVATE
     JUCE_PLUGINHOST_VST3=1)
 
 target_link_libraries(linux-daw-vst3-test
-    PRIVATE juce::juce_core juce::juce_events juce::juce_audio_devices juce::juce_audio_formats juce::juce_dsp juce::juce_audio_processors
+    PRIVATE juce::juce_core juce::juce_events juce::juce_audio_devices juce::juce_audio_formats juce::juce_dsp juce::juce_audio_processors asound
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
