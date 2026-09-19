@@ -1199,6 +1199,8 @@ Add audio routing
 
 ## Milestone 37 - Latency Optimization
 
+**Status:** Completed
+
 Measure and optimize:
 
 * input latency
@@ -1377,11 +1379,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 37 - Latency Optimization
+## Milestone 38 - Error Handling
 
-Audio routing works: tracks route to the master or buses with post-fader sends, verified numerically.
+Latency optimization is measured: FFTW-accelerated DSP, per-processor profiling, and thread scheduling reporting are in place.
 
-The next task is to measure and optimize latency: input latency, processing latency, output latency, buffer size, callback scheduling, DSP overhead, and unnecessary copies.
+The next task is to handle error cases gracefully: device disappearance, device changes, invalid configurations, plugin failures, corrupted project files, and missing audio files.
 
 Do not skip ahead.
 

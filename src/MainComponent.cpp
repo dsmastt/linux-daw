@@ -1,5 +1,7 @@
 #include "MainComponent.h"
 
+#include <pthread.h>
+
 namespace daw
 {
 namespace
@@ -371,6 +373,12 @@ void MainComponent::updateStatus()
                               .getIntValue() / 1024;
 
     status << "\nMemory: " << memoryMb << " MB";
+
+    int policy = -1;
+    sched_param scheduling {};
+    pthread_getschedparam (pthread_self(), &policy, &scheduling);
+
+    status << "\nThread scheduling: policy " << policy << ", priority " << scheduling.sched_priority;
 
     statusLabel.setText (status, juce::dontSendNotification);
 }

@@ -58,10 +58,11 @@ target_compile_features(linux-daw PRIVATE cxx_std_20)
 target_compile_definitions(linux-daw PRIVATE
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
-    JUCE_PLUGINHOST_VST3=1)
+    JUCE_PLUGINHOST_VST3=1
+    JUCE_DSP_USE_SHARED_FFTW=1)
 
 target_link_libraries(linux-daw
-    PRIVATE juce::juce_core juce::juce_events juce::juce_audio_devices juce::juce_audio_formats juce::juce_dsp juce::juce_gui_basics juce::juce_audio_processors
+    PRIVATE juce::juce_core juce::juce_events juce::juce_audio_devices juce::juce_audio_formats juce::juce_dsp juce::juce_gui_basics juce::juce_audio_processors fftw3f
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
 
 if(LINUX_DAW_BUILD_TEST_PLUGIN)
@@ -106,8 +107,9 @@ target_compile_features(linux-daw-vst3-test PRIVATE cxx_std_20)
 target_compile_definitions(linux-daw-vst3-test PRIVATE
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
-    JUCE_PLUGINHOST_VST3=1)
+    JUCE_PLUGINHOST_VST3=1
+    JUCE_DSP_USE_SHARED_FFTW=1)
 
 target_link_libraries(linux-daw-vst3-test
-    PRIVATE juce::juce_core juce::juce_events juce::juce_audio_devices juce::juce_audio_formats juce::juce_dsp juce::juce_audio_processors asound
+    PRIVATE juce::juce_core juce::juce_events juce::juce_audio_devices juce::juce_audio_formats juce::juce_dsp juce::juce_audio_processors asound fftw3f
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
