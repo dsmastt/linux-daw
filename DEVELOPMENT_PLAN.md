@@ -261,6 +261,8 @@ Implement audio passthrough
 
 ## Milestone 6 - Audio Debugging Tools
 
+**Status:** Completed
+
 ### Goal
 
 Make audio behavior observable.
@@ -1315,11 +1317,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 6 - Audio Debugging Tools
+## Milestone 7 - Gain Processor
 
-Passthrough works: input reaches output on the AI-04 with selectable device, sample rate, and buffer size.
+Diagnostics work: the app reports audio configuration, callback timing, audio-thread duty, and xruns.
 
-The next task is to make audio behavior observable: sample rate, buffer size, channel counts, callback timing, xruns, and CPU usage, with an optional debug mode that does not print from the audio thread.
+The next task is to introduce the first DSP processor: a gain stage with a parameter that can be changed safely from outside the audio thread, processed without allocations inside the audio callback.
 
 Do not skip ahead.
 

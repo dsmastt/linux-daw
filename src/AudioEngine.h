@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <cstdint>
 
 #include <juce_audio_devices/juce_audio_devices.h>
 
@@ -25,6 +26,13 @@ public:
     int getInputLatencySamples() const noexcept { return inputLatencySamples.load(); }
     int getOutputLatencySamples() const noexcept { return outputLatencySamples.load(); }
 
+    int getNumInputChannels() const noexcept { return numInputChannels.load(); }
+    int getNumOutputChannels() const noexcept { return numOutputChannels.load(); }
+    std::uint64_t getNumCallbacks() const noexcept { return numCallbacks.load(); }
+    double getTotalCallbackTimeMs() const noexcept { return totalCallbackTimeMs.load(); }
+    double getMaxCallbackTimeMs() const noexcept { return maxCallbackTimeMs.load(); }
+    int getXRunCount() const noexcept { return xruns.load(); }
+
 private:
     void audioDeviceIOCallbackWithContext (const float* const* inputChannelData,
                                            int numInputChannels,
@@ -42,5 +50,14 @@ private:
     std::atomic<int> bufferSize { 0 };
     std::atomic<int> inputLatencySamples { 0 };
     std::atomic<int> outputLatencySamples { 0 };
+    std::atomic<int> numInputChannels { 0 };
+    std::atomic<int> numOutputChannels { 0 };
+    std::atomic<std::uint64_t> numCallbacks { 0 };
+    std::atomic<double> totalCallbackTimeMs { 0.0 };
+    std::atomic<double> maxCallbackTimeMs { 0.0 };
+    std::atomic<int> xruns { 0 };
+
+    juce::AudioIODevice* currentDevice = nullptr;
+    int callbacksSinceXRunCheck = 0;
 };
 } // namespace daw

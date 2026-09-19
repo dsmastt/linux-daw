@@ -1,3 +1,4 @@
+#include <chrono>
 #include <iostream>
 
 #include <juce_core/juce_core.h>
@@ -106,22 +107,44 @@ int runAudioEngine (const juce::ArgumentList& args)
     const auto latencyMs = (1000.0 * totalLatencySamples) / engine.getSampleRate();
 
     std::cout << "Audio running: sample rate " << engine.getSampleRate()
-              << ", buffer size " << engine.getBufferSize() << std::endl;
+              << ", buffer size " << engine.getBufferSize()
+              << ", input channels " << engine.getNumInputChannels()
+              << ", output channels " << engine.getNumOutputChannels() << std::endl;
     std::cout << "Latency: " << engine.getInputLatencySamples() << " in + "
               << engine.getOutputLatencySamples() << " out samples = " << latencyMs << " ms" << std::endl;
 
-    if (durationSeconds > 0.0)
+    const bool debug = args.containsOption ("--debug");
+
+    const auto reportStats = [&engine]
     {
-        juce::Thread::sleep (static_cast<int> (durationSeconds * 1000));
+        const auto callbacks = engine.getNumCallbacks();
+        const auto avgCallbackMs = callbacks > 0 ? engine.getTotalCallbackTimeMs() / callbacks : 0.0;
+        const auto periodMs = (1000.0 * engine.getBufferSize()) / engine.getSampleRate();
+        const auto duty = periodMs > 0.0 ? (100.0 * avgCallbackMs / periodMs) : 0.0;
+
+        std::cout << "Stats: callbacks " << callbacks
+                  << ", avg " << avgCallbackMs << " ms, max " << engine.getMaxCallbackTimeMs()
+                  << " ms, audio thread duty " << duty << " %, xruns " << engine.getXRunCount() << std::endl;
+    };
+
+    const auto deadline = durationSeconds > 0.0
+                            ? std::chrono::steady_clock::now() + std::chrono::milliseconds (static_cast<int> (durationSeconds * 1000))
+                            : std::chrono::steady_clock::time_point::max();
+
+    while (engine.isRunning() && std::chrono::steady_clock::now() < deadline)
+    {
+        juce::Thread::sleep (debug ? 1000 : 200);
+
+        if (debug)
+            reportStats();
+    }
+
+    reportStats();
+
+    if (engine.isRunning())
+    {
         engine.stop();
         std::cout << "Audio stopped." << std::endl;
-    }
-    else
-    {
-        std::cout << "Passthrough running. Press Ctrl+C to stop." << std::endl;
-
-        while (engine.isRunning())
-            juce::Thread::sleep (200);
     }
 
     return 0;
