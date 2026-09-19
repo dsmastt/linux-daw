@@ -13,7 +13,7 @@ FetchContent_Declare(JUCE
 
 FetchContent_MakeAvailable(JUCE)
 
-juce_add_console_app(linux-daw
+juce_add_gui_app(linux-daw
     PRODUCT_NAME "linux-daw"
     COMPANY_NAME "linux-daw"
     NEEDS_WEB_BROWSER FALSE
@@ -21,7 +21,6 @@ juce_add_console_app(linux-daw
 
 target_sources(linux-daw PRIVATE
     src/main.cpp
-    src/AudioDeviceDiscovery.cpp
     src/AudioEngine.cpp
     src/AudioGraph.cpp
     src/AudioRecorder.cpp
@@ -29,6 +28,8 @@ target_sources(linux-daw PRIVATE
     src/ConvolutionProcessor.cpp
     src/DistortionProcessor.cpp
     src/GainProcessor.cpp
+    src/MainComponent.cpp
+    src/MainWindow.cpp
     src/NoiseGateProcessor.cpp
     src/ParametricEqProcessor.cpp
     src/PlaybackProcessor.cpp
@@ -42,5 +43,5 @@ target_compile_definitions(linux-daw PRIVATE
     JUCE_USE_CURL=0)
 
 target_link_libraries(linux-daw
-    PRIVATE juce::juce_core juce::juce_events juce::juce_audio_devices juce::juce_audio_formats juce::juce_dsp
+    PRIVATE juce::juce_core juce::juce_events juce::juce_audio_devices juce::juce_audio_formats juce::juce_dsp juce::juce_gui_basics
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)

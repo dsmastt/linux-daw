@@ -664,6 +664,8 @@ Add audio file playback
 
 ## Milestone 18 - Basic GUI
 
+**Status:** Completed
+
 ### Goal
 
 Create a basic application interface.
@@ -1339,11 +1341,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 18 - Basic GUI
+## Milestone 19 - Processor Controls
 
-Playback works: WAV files load, play, pause, stop, and seek with sample-rate handling, mixed into the engine output.
+The basic GUI works: device selection, audio start/stop, and live sample-rate, buffer-size, and status displays.
 
-The next task is to create a basic application interface with device selection, audio start/stop, and live sample-rate, buffer-size, and status displays.
+The next task is to expose DSP parameters in the GUI: gain, gate, EQ, compressor, distortion, IR, and reverb, communicating safely with the audio thread.
 
 Do not skip ahead.
 
