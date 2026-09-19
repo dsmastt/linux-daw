@@ -66,23 +66,39 @@ public:
     void setCompressorReleaseMs (float releaseMs) noexcept;
     void setCompressorMakeupGainDb (float makeupGainDb) noexcept;
 
+    float getCompressorThresholdDb() const noexcept;
+    float getCompressorRatio() const noexcept;
+    float getCompressorAttackMs() const noexcept;
+    float getCompressorReleaseMs() const noexcept;
+    float getCompressorMakeupGainDb() const noexcept;
+
     void setDistortionDriveDb (float driveDb) noexcept;
     void setDistortionTone (float tone) noexcept;
     void setDistortionMode (DistortionMode mode) noexcept;
+
+    float getDistortionDriveDb() const noexcept;
+    float getDistortionTone() const noexcept;
+    DistortionMode getDistortionMode() const noexcept;
 
     juce::String loadImpulseResponse (const juce::File& file);
     void clearImpulseResponse() noexcept;
     bool hasImpulseResponse() const noexcept;
     int getImpulseResponseLength() const noexcept;
+    juce::String getImpulseResponseFilePath() const noexcept;
 
     void setReverbWetDry (float wetDry) noexcept;
     void setReverbDecay (float decay) noexcept;
     void setReverbSize (float size) noexcept;
 
+    float getReverbWetDry() const noexcept;
+    float getReverbDecay() const noexcept;
+    float getReverbSize() const noexcept;
+
     juce::String loadVst3Plugin (const juce::PluginDescription& description, double sampleRate, int bufferSize);
     void unloadVst3Plugin() noexcept;
     bool isVst3PluginLoaded() const noexcept;
     juce::String getVst3PluginName() const noexcept;
+    juce::PluginDescription getVst3PluginDescription() const noexcept;
     void setVst3PluginBypassed (bool shouldBeBypassed) noexcept;
     bool isVst3PluginBypassed() const noexcept;
     juce::AudioPluginInstance* getVst3PluginInstance() const noexcept;

@@ -18,6 +18,7 @@ public:
 
     bool isLoaded() const noexcept { return loaded.load(); }
     juce::String getPluginName() const noexcept { return pluginName; }
+    juce::PluginDescription getPluginDescription() const noexcept { return pluginDescription; }
 
     void setBypassed (bool shouldBeBypassed) noexcept { bypassed.store (shouldBeBypassed); }
     bool isBypassed() const noexcept { return bypassed.load(); }
@@ -33,6 +34,7 @@ private:
     std::atomic<bool> loaded { false };
     std::atomic<bool> bypassed { false };
     juce::String pluginName;
+    juce::PluginDescription pluginDescription;
     std::unique_ptr<juce::AudioPluginInstance> instance;
     juce::AudioBuffer<float> pluginBuffer;
     juce::MidiBuffer midiBuffer;

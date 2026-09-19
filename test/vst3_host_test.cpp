@@ -13,6 +13,7 @@
 
 #include "AudioEngine.h"
 #include "AudioGraph.h"
+#include "Project.h"
 #include "Vst3HostProcessor.h"
 
 namespace
@@ -394,6 +395,64 @@ int runTest (const juce::ArgumentList& args)
 
     const auto pluginAutomationOk = std::abs (pluginAutomationValue - 1.0f) < 0.01f;
 
+    // Project save/load round-trip test.
+    graph.getTransport().setTempoBpm (135.0);
+    graph.getTrack (1).setVolumeDb (-6.0f);
+    graph.getTrack (1).setPan (0.25f);
+    graph.getTrack (1).addClip (1000, 2000, 500);
+
+    graph.getTrack (0).addMidiEvent (4800, noteOnMessage.getRawData(), noteOnMessage.getRawDataSize());
+    graph.getTrack (0).addMidiEvent (24000, noteOffMessage.getRawData(), noteOffMessage.getRawDataSize());
+
+    const auto projectFile = juce::File ("/tmp/kilo/linux-daw-roundtrip.ldaw");
+
+    const auto saveError = daw::Project::save (projectFile, graph);
+
+    if (saveError.isNotEmpty())
+    {
+        std::cout << "Project save failed: " << saveError << std::endl;
+        engine.stop();
+        graph.unloadVst3Plugin();
+        return 1;
+    }
+
+    std::cout << "Project saved" << std::endl;
+
+    daw::AudioGraph loadedGraph;
+
+    const auto projectLoadError = daw::Project::load (projectFile, loadedGraph);
+
+    if (projectLoadError.isNotEmpty())
+    {
+        std::cout << "Project load failed: " << projectLoadError << std::endl;
+        engine.stop();
+        graph.unloadVst3Plugin();
+        return 1;
+    }
+
+    const auto roundTripOk =
+        std::abs (loadedGraph.getTransport().getTempoBpm() - 135.0) < 0.01
+        && std::abs (loadedGraph.getTrack (1).getVolumeDb() + 6.0f) < 0.01f
+        && std::abs (loadedGraph.getTrack (1).getPan() - 0.25f) < 0.01f
+        && loadedGraph.getTrack (1).getNumClips() == 1
+        && loadedGraph.getTrack (1).getClip (0).startSamples.load() == 1000
+        && loadedGraph.getTrack (0).getNumMidiEvents() == 2
+        && loadedGraph.getTrack (0).getNumAutomationCurves() >= 2
+        && loadedGraph.isVst3PluginLoaded()
+        && loadedGraph.getPlaybackFilePath().isNotEmpty();
+
+    std::cout << "Loaded state: tempo " << loadedGraph.getTransport().getTempoBpm()
+              << ", vol " << loadedGraph.getTrack (1).getVolumeDb()
+              << ", pan " << loadedGraph.getTrack (1).getPan()
+              << ", clips " << loadedGraph.getTrack (1).getNumClips()
+              << ", midi " << loadedGraph.getTrack (0).getNumMidiEvents()
+              << ", curves " << loadedGraph.getTrack (0).getNumAutomationCurves()
+              << ", plugin " << (loadedGraph.isVst3PluginLoaded() ? "yes" : "no")
+              << ", clipFile " << (loadedGraph.getPlaybackFilePath().isNotEmpty() ? "yes" : "no")
+              << std::endl;
+
+    std::cout << "Project round-trip " << (roundTripOk ? "passed" : "FAILED") << std::endl;
+
     // MIDI round-trip test via virtual devices.
     const auto midiOpenError = engine.openVirtualMidiDevice ("linux-daw-test-midi");
 
@@ -438,7 +497,7 @@ int runTest (const juce::ArgumentList& args)
     engine.closeMidiDevice();
 
     if (callbacks == 0 || xruns != 0 || !transportOk || !clipsOk || !midiOk || !midiTrackOk
-        || !volumeAutomationOk || !pluginAutomationOk)
+        || !volumeAutomationOk || !pluginAutomationOk || !roundTripOk)
     {
         std::cout << "VST3 host test FAILED" << std::endl;
         return 1;

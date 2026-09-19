@@ -28,6 +28,7 @@ set(CORE_SOURCES
     src/ParametricEqProcessor.cpp
     src/PlaybackProcessor.cpp
     src/ProcessorChain.cpp
+    src/Project.cpp
     src/ReverbProcessor.cpp
     src/Track.cpp
     src/Transport.cpp

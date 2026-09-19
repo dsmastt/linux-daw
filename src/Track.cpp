@@ -195,6 +195,31 @@ void Track::setCompressorMakeupGainDb (float makeupGainDb) noexcept
         compressorProcessor->setMakeupGainDb (makeupGainDb);
 }
 
+float Track::getCompressorThresholdDb() const noexcept
+{
+    return compressorProcessor != nullptr ? compressorProcessor->getThresholdDb() : -10.0f;
+}
+
+float Track::getCompressorRatio() const noexcept
+{
+    return compressorProcessor != nullptr ? compressorProcessor->getRatio() : 4.0f;
+}
+
+float Track::getCompressorAttackMs() const noexcept
+{
+    return compressorProcessor != nullptr ? compressorProcessor->getAttackMs() : 5.0f;
+}
+
+float Track::getCompressorReleaseMs() const noexcept
+{
+    return compressorProcessor != nullptr ? compressorProcessor->getReleaseMs() : 100.0f;
+}
+
+float Track::getCompressorMakeupGainDb() const noexcept
+{
+    return compressorProcessor != nullptr ? compressorProcessor->getMakeupGainDb() : 0.0f;
+}
+
 void Track::setDistortionDriveDb (float driveDb) noexcept
 {
     if (distortionProcessor != nullptr)
@@ -211,6 +236,21 @@ void Track::setDistortionMode (DistortionMode mode) noexcept
 {
     if (distortionProcessor != nullptr)
         distortionProcessor->setMode (mode);
+}
+
+float Track::getDistortionDriveDb() const noexcept
+{
+    return distortionProcessor != nullptr ? distortionProcessor->getDriveDb() : 12.0f;
+}
+
+float Track::getDistortionTone() const noexcept
+{
+    return distortionProcessor != nullptr ? distortionProcessor->getTone() : 0.5f;
+}
+
+DistortionMode Track::getDistortionMode() const noexcept
+{
+    return distortionProcessor != nullptr ? distortionProcessor->getMode() : DistortionMode::soft;
 }
 
 juce::String Track::loadImpulseResponse (const juce::File& file)
@@ -237,6 +277,11 @@ int Track::getImpulseResponseLength() const noexcept
     return convolutionProcessor != nullptr ? convolutionProcessor->getImpulseResponseLength() : 0;
 }
 
+juce::String Track::getImpulseResponseFilePath() const noexcept
+{
+    return convolutionProcessor != nullptr ? convolutionProcessor->getImpulseResponseFilePath() : juce::String();
+}
+
 void Track::setReverbWetDry (float wetDry) noexcept
 {
     if (reverbProcessor != nullptr)
@@ -253,6 +298,21 @@ void Track::setReverbSize (float size) noexcept
 {
     if (reverbProcessor != nullptr)
         reverbProcessor->setSize (size);
+}
+
+float Track::getReverbWetDry() const noexcept
+{
+    return reverbProcessor != nullptr ? reverbProcessor->getWetDry() : 0.2f;
+}
+
+float Track::getReverbDecay() const noexcept
+{
+    return reverbProcessor != nullptr ? reverbProcessor->getDecay() : 0.5f;
+}
+
+float Track::getReverbSize() const noexcept
+{
+    return reverbProcessor != nullptr ? reverbProcessor->getSize() : 0.5f;
 }
 
 juce::String Track::loadVst3Plugin (const juce::PluginDescription& description, double sampleRate, int bufferSize)
@@ -277,6 +337,11 @@ bool Track::isVst3PluginLoaded() const noexcept
 juce::String Track::getVst3PluginName() const noexcept
 {
     return vst3Processor != nullptr ? vst3Processor->getPluginName() : juce::String();
+}
+
+juce::PluginDescription Track::getVst3PluginDescription() const noexcept
+{
+    return vst3Processor != nullptr ? vst3Processor->getPluginDescription() : juce::PluginDescription();
 }
 
 void Track::setVst3PluginBypassed (bool shouldBeBypassed) noexcept

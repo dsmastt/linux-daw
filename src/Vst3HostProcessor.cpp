@@ -22,6 +22,7 @@ juce::String Vst3HostProcessor::loadPlugin (const juce::PluginDescription& descr
 
     instance = std::move (plugin);
     pluginName = instance->getName();
+    pluginDescription = description;
     sampleRate = rate;
     bufferSize = buffer;
 

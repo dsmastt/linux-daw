@@ -37,6 +37,7 @@ juce::String PlaybackProcessor::loadFile (const juce::File& file)
     sourceData = std::move (loaded);
     sourceSampleRate = reader->sampleRate;
     sourceChannels = numSourceChannels;
+    loadedFilePath = file.getFullPathName();
 
     playing.store (false, std::memory_order_relaxed);
     position.store (0, std::memory_order_relaxed);

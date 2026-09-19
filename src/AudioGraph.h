@@ -76,6 +76,7 @@ public:
 
     // Playback (graph-level, mixed into the master output).
     juce::String loadPlaybackFile (const juce::File& file);
+    juce::String getPlaybackFilePath() const noexcept;
     void playPlayback() noexcept;
     void pausePlayback() noexcept;
     void stopPlayback() noexcept;

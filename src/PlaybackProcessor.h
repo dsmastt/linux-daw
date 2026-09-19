@@ -15,6 +15,8 @@ class PlaybackProcessor final : public AudioProcessor
 public:
     juce::String loadFile (const juce::File& file);
 
+    juce::String getLoadedFilePath() const noexcept { return loadedFilePath; }
+
     void play() noexcept;
     void pause() noexcept;
     void stop() noexcept;
@@ -44,6 +46,7 @@ private:
     std::vector<float> sourceData;
     double sourceSampleRate = 0.0;
     int sourceChannels = 0;
+    juce::String loadedFilePath;
 
     std::vector<float> playbackData;
     int playbackChannels = 0;

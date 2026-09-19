@@ -70,6 +70,11 @@ juce::String AudioGraph::loadPlaybackFile (const juce::File& file)
     return playbackProcessor->loadFile (file);
 }
 
+juce::String AudioGraph::getPlaybackFilePath() const noexcept
+{
+    return playbackProcessor->getLoadedFilePath();
+}
+
 void AudioGraph::playPlayback() noexcept { playbackProcessor->play(); }
 void AudioGraph::pausePlayback() noexcept { playbackProcessor->pause(); }
 void AudioGraph::stopPlayback() noexcept { playbackProcessor->stop(); }

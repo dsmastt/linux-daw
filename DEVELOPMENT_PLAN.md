@@ -1017,6 +1017,8 @@ Add parameter automation
 
 ## Milestone 30 - Project Format
 
+**Status:** Completed
+
 Create a project format containing:
 
 * tracks
@@ -1363,11 +1365,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 30 - Project Format
+## Milestone 31 - Project Persistence
 
-Automation works: volume, pan, DSP, and plugin parameters follow transport-driven curves, verified numerically.
+The project format works: tracks, clips, plugin state, DSP parameters, automation, routing, and metadata serialize to JSON with relative paths, verified with a full save/load round-trip.
 
-The next task is to create a project format containing tracks, clips, plugin state, DSP parameters, automation, routing, and project metadata, avoiding absolute paths where possible.
+The next task is to implement new project, save, save as, load, and project recovery handling in the application.
 
 Do not skip ahead.
 

@@ -20,6 +20,7 @@ public:
 
     bool hasImpulseResponse() const noexcept { return hasImpulseResponse_.load(); }
     int getImpulseResponseLength() const noexcept;
+    juce::String getImpulseResponseFilePath() const noexcept { return impulseResponseFilePath; }
 
     void prepare (double sampleRate, int bufferSize) noexcept override;
     void process (float* const* channels, int numChannels, int numSamples) noexcept override;
@@ -35,6 +36,7 @@ private:
     std::atomic<bool> hasImpulseResponse_ { false };
     std::vector<float> impulseResponse;
     double impulseResponseSampleRate = 0.0;
+    juce::String impulseResponseFilePath;
 
     std::vector<float> processedImpulseResponse;
     std::vector<float> irSpectra;

@@ -26,6 +26,7 @@ juce::String ConvolutionProcessor::loadImpulseResponse (const juce::File& file)
 
     impulseResponse = std::move (loaded);
     impulseResponseSampleRate = reader->sampleRate;
+    impulseResponseFilePath = file.getFullPathName();
     hasImpulseResponse_.store (true, std::memory_order_release);
     partitionsReady = false;
 
