@@ -1,319 +1,125 @@
 #include "AudioGraph.h"
 
-#include <memory>
+#include <algorithm>
 
-#include "CompressorProcessor.h"
-#include "ConvolutionProcessor.h"
-#include "DistortionProcessor.h"
-#include "GainProcessor.h"
-#include "NoiseGateProcessor.h"
-#include "ParametricEqProcessor.h"
+#include <juce_audio_basics/juce_audio_basics.h>
+
 #include "PlaybackProcessor.h"
-#include "ReverbProcessor.h"
-#include "Vst3HostProcessor.h"
 
 namespace daw
 {
 AudioGraph::AudioGraph()
 {
-    auto gain = std::make_unique<GainProcessor>();
-    gainProcessor = gain.get();
-    chain.append (std::move (gain));
+    for (int i = 0; i < numTracks; ++i)
+        tracks.push_back (std::make_unique<Track>());
 
-    auto gate = std::make_unique<NoiseGateProcessor>();
-    gateProcessor = gate.get();
-    chain.append (std::move (gate));
-
-    auto eq = std::make_unique<ParametricEqProcessor>();
-    eqProcessor = eq.get();
-    chain.append (std::move (eq));
-
-    auto compressor = std::make_unique<CompressorProcessor>();
-    compressorProcessor = compressor.get();
-    chain.append (std::move (compressor));
-
-    auto distortion = std::make_unique<DistortionProcessor>();
-    distortionProcessor = distortion.get();
-    chain.append (std::move (distortion));
-
-    auto vst3 = std::make_unique<Vst3HostProcessor>();
-    vst3Processor = vst3.get();
-    chain.append (std::move (vst3));
-
-    auto convolution = std::make_unique<ConvolutionProcessor>();
-    convolutionProcessor = convolution.get();
-    chain.append (std::move (convolution));
-
-    auto reverb = std::make_unique<ReverbProcessor>();
-    reverbProcessor = reverb.get();
-    chain.append (std::move (reverb));
-
-    auto playback = std::make_unique<PlaybackProcessor>();
-    playbackProcessor = playback.get();
-    chain.append (std::move (playback));
+    playbackProcessor = std::make_unique<PlaybackProcessor>();
 }
 
 AudioGraph::~AudioGraph() = default;
 
-void AudioGraph::setGainDb (float gainDb) noexcept
-{
-    if (gainProcessor != nullptr)
-        gainProcessor->setGainDb (gainDb);
-}
+void AudioGraph::setGainDb (float gainDb) noexcept { getTrack (0).setGainDb (gainDb); }
+float AudioGraph::getGainDb() const noexcept { return getTrack (0).getGainDb(); }
 
-float AudioGraph::getGainDb() const noexcept
-{
-    return gainProcessor != nullptr ? gainProcessor->getGainDb() : 0.0f;
-}
+void AudioGraph::setGateThresholdDb (float thresholdDb) noexcept { getTrack (0).setGateThresholdDb (thresholdDb); }
+float AudioGraph::getGateThresholdDb() const noexcept { return getTrack (0).getGateThresholdDb(); }
+void AudioGraph::setGateAttackMs (float attackMs) noexcept { getTrack (0).setGateAttackMs (attackMs); }
+float AudioGraph::getGateAttackMs() const noexcept { return getTrack (0).getGateAttackMs(); }
+void AudioGraph::setGateReleaseMs (float releaseMs) noexcept { getTrack (0).setGateReleaseMs (releaseMs); }
+float AudioGraph::getGateReleaseMs() const noexcept { return getTrack (0).getGateReleaseMs(); }
 
-void AudioGraph::setGateThresholdDb (float thresholdDb) noexcept
-{
-    if (gateProcessor != nullptr)
-        gateProcessor->setThresholdDb (thresholdDb);
-}
+void AudioGraph::setEqBandParameters (int band, double frequencyHz, float gainDb, float q) noexcept { getTrack (0).setEqBandParameters (band, frequencyHz, gainDb, q); }
+int AudioGraph::getNumEqBands() const noexcept { return getTrack (0).getNumEqBands(); }
+double AudioGraph::getEqBandFrequency (int band) const noexcept { return getTrack (0).getEqBandFrequency (band); }
+float AudioGraph::getEqBandGain (int band) const noexcept { return getTrack (0).getEqBandGain (band); }
+float AudioGraph::getEqBandQ (int band) const noexcept { return getTrack (0).getEqBandQ (band); }
 
-float AudioGraph::getGateThresholdDb() const noexcept
-{
-    return gateProcessor != nullptr ? gateProcessor->getThresholdDb() : -60.0f;
-}
+void AudioGraph::setCompressorThresholdDb (float thresholdDb) noexcept { getTrack (0).setCompressorThresholdDb (thresholdDb); }
+void AudioGraph::setCompressorRatio (float ratio) noexcept { getTrack (0).setCompressorRatio (ratio); }
+void AudioGraph::setCompressorAttackMs (float attackMs) noexcept { getTrack (0).setCompressorAttackMs (attackMs); }
+void AudioGraph::setCompressorReleaseMs (float releaseMs) noexcept { getTrack (0).setCompressorReleaseMs (releaseMs); }
+void AudioGraph::setCompressorMakeupGainDb (float makeupGainDb) noexcept { getTrack (0).setCompressorMakeupGainDb (makeupGainDb); }
 
-void AudioGraph::setGateAttackMs (float attackMs) noexcept
-{
-    if (gateProcessor != nullptr)
-        gateProcessor->setAttackMs (attackMs);
-}
+void AudioGraph::setDistortionDriveDb (float driveDb) noexcept { getTrack (0).setDistortionDriveDb (driveDb); }
+void AudioGraph::setDistortionTone (float tone) noexcept { getTrack (0).setDistortionTone (tone); }
+void AudioGraph::setDistortionMode (DistortionMode mode) noexcept { getTrack (0).setDistortionMode (mode); }
 
-float AudioGraph::getGateAttackMs() const noexcept
-{
-    return gateProcessor != nullptr ? gateProcessor->getAttackMs() : 1.0f;
-}
+juce::String AudioGraph::loadImpulseResponse (const juce::File& file) { return getTrack (0).loadImpulseResponse (file); }
+void AudioGraph::clearImpulseResponse() noexcept { getTrack (0).clearImpulseResponse(); }
+bool AudioGraph::hasImpulseResponse() const noexcept { return getTrack (0).hasImpulseResponse(); }
+int AudioGraph::getImpulseResponseLength() const noexcept { return getTrack (0).getImpulseResponseLength(); }
 
-void AudioGraph::setGateReleaseMs (float releaseMs) noexcept
-{
-    if (gateProcessor != nullptr)
-        gateProcessor->setReleaseMs (releaseMs);
-}
-
-float AudioGraph::getGateReleaseMs() const noexcept
-{
-    return gateProcessor != nullptr ? gateProcessor->getReleaseMs() : 100.0f;
-}
-
-void AudioGraph::setEqBandParameters (int band, double frequencyHz, float gainDb, float q) noexcept
-{
-    if (eqProcessor != nullptr)
-        eqProcessor->setBandParameters (band, frequencyHz, gainDb, q);
-}
-
-int AudioGraph::getNumEqBands() const noexcept
-{
-    return ParametricEqProcessor::maxBands;
-}
-
-double AudioGraph::getEqBandFrequency (int band) const noexcept
-{
-    return eqProcessor != nullptr ? eqProcessor->getBandFrequency (band) : 0.0;
-}
-
-float AudioGraph::getEqBandGain (int band) const noexcept
-{
-    return eqProcessor != nullptr ? eqProcessor->getBandGainDb (band) : 0.0f;
-}
-
-float AudioGraph::getEqBandQ (int band) const noexcept
-{
-    return eqProcessor != nullptr ? eqProcessor->getBandQ (band) : 0.0f;
-}
-
-void AudioGraph::setCompressorThresholdDb (float thresholdDb) noexcept
-{
-    if (compressorProcessor != nullptr)
-        compressorProcessor->setThresholdDb (thresholdDb);
-}
-
-void AudioGraph::setCompressorRatio (float ratio) noexcept
-{
-    if (compressorProcessor != nullptr)
-        compressorProcessor->setRatio (ratio);
-}
-
-void AudioGraph::setCompressorAttackMs (float attackMs) noexcept
-{
-    if (compressorProcessor != nullptr)
-        compressorProcessor->setAttackMs (attackMs);
-}
-
-void AudioGraph::setCompressorReleaseMs (float releaseMs) noexcept
-{
-    if (compressorProcessor != nullptr)
-        compressorProcessor->setReleaseMs (releaseMs);
-}
-
-void AudioGraph::setCompressorMakeupGainDb (float makeupGainDb) noexcept
-{
-    if (compressorProcessor != nullptr)
-        compressorProcessor->setMakeupGainDb (makeupGainDb);
-}
-
-void AudioGraph::setDistortionDriveDb (float driveDb) noexcept
-{
-    if (distortionProcessor != nullptr)
-        distortionProcessor->setDriveDb (driveDb);
-}
-
-void AudioGraph::setDistortionTone (float tone) noexcept
-{
-    if (distortionProcessor != nullptr)
-        distortionProcessor->setTone (tone);
-}
-
-void AudioGraph::setDistortionMode (DistortionMode mode) noexcept
-{
-    if (distortionProcessor != nullptr)
-        distortionProcessor->setMode (mode);
-}
-
-juce::String AudioGraph::loadImpulseResponse (const juce::File& file)
-{
-    if (convolutionProcessor == nullptr)
-        return "Convolution processor unavailable";
-
-    return convolutionProcessor->loadImpulseResponse (file);
-}
-
-void AudioGraph::clearImpulseResponse() noexcept
-{
-    if (convolutionProcessor != nullptr)
-        convolutionProcessor->clearImpulseResponse();
-}
-
-bool AudioGraph::hasImpulseResponse() const noexcept
-{
-    return convolutionProcessor != nullptr && convolutionProcessor->hasImpulseResponse();
-}
-
-int AudioGraph::getImpulseResponseLength() const noexcept
-{
-    return convolutionProcessor != nullptr ? convolutionProcessor->getImpulseResponseLength() : 0;
-}
-
-void AudioGraph::setReverbWetDry (float wetDry) noexcept
-{
-    if (reverbProcessor != nullptr)
-        reverbProcessor->setWetDry (wetDry);
-}
-
-void AudioGraph::setReverbDecay (float decay) noexcept
-{
-    if (reverbProcessor != nullptr)
-        reverbProcessor->setDecay (decay);
-}
-
-void AudioGraph::setReverbSize (float size) noexcept
-{
-    if (reverbProcessor != nullptr)
-        reverbProcessor->setSize (size);
-}
-
-juce::String AudioGraph::loadPlaybackFile (const juce::File& file)
-{
-    if (playbackProcessor == nullptr)
-        return "Playback processor unavailable";
-
-    return playbackProcessor->loadFile (file);
-}
-
-void AudioGraph::playPlayback() noexcept
-{
-    if (playbackProcessor != nullptr)
-        playbackProcessor->play();
-}
-
-void AudioGraph::pausePlayback() noexcept
-{
-    if (playbackProcessor != nullptr)
-        playbackProcessor->pause();
-}
-
-void AudioGraph::stopPlayback() noexcept
-{
-    if (playbackProcessor != nullptr)
-        playbackProcessor->stop();
-}
-
-bool AudioGraph::isPlaybackPlaying() const noexcept
-{
-    return playbackProcessor != nullptr && playbackProcessor->isPlaying();
-}
-
-double AudioGraph::getPlaybackPositionSeconds() const noexcept
-{
-    return playbackProcessor != nullptr ? playbackProcessor->getPositionSeconds() : 0.0;
-}
-
-double AudioGraph::getPlaybackLengthSeconds() const noexcept
-{
-    return playbackProcessor != nullptr ? playbackProcessor->getLengthSeconds() : 0.0;
-}
-
-void AudioGraph::setPlaybackPositionSeconds (double seconds) noexcept
-{
-    if (playbackProcessor != nullptr)
-        playbackProcessor->setPositionSeconds (seconds);
-}
+void AudioGraph::setReverbWetDry (float wetDry) noexcept { getTrack (0).setReverbWetDry (wetDry); }
+void AudioGraph::setReverbDecay (float decay) noexcept { getTrack (0).setReverbDecay (decay); }
+void AudioGraph::setReverbSize (float size) noexcept { getTrack (0).setReverbSize (size); }
 
 juce::String AudioGraph::loadVst3Plugin (const juce::PluginDescription& description, double sampleRate, int bufferSize)
 {
-    if (vst3Processor == nullptr)
-        return "VST3 processor unavailable";
-
-    return vst3Processor->loadPlugin (description, sampleRate, bufferSize);
+    return getTrack (0).loadVst3Plugin (description, sampleRate, bufferSize);
 }
 
-void AudioGraph::unloadVst3Plugin() noexcept
+void AudioGraph::unloadVst3Plugin() noexcept { getTrack (0).unloadVst3Plugin(); }
+bool AudioGraph::isVst3PluginLoaded() const noexcept { return getTrack (0).isVst3PluginLoaded(); }
+juce::String AudioGraph::getVst3PluginName() const noexcept { return getTrack (0).getVst3PluginName(); }
+void AudioGraph::setVst3PluginBypassed (bool shouldBeBypassed) noexcept { getTrack (0).setVst3PluginBypassed (shouldBeBypassed); }
+bool AudioGraph::isVst3PluginBypassed() const noexcept { return getTrack (0).isVst3PluginBypassed(); }
+juce::AudioPluginInstance* AudioGraph::getVst3PluginInstance() const noexcept { return getTrack (0).getVst3PluginInstance(); }
+
+juce::String AudioGraph::loadPlaybackFile (const juce::File& file)
 {
-    if (vst3Processor != nullptr)
-        vst3Processor->unloadPlugin();
+    return playbackProcessor->loadFile (file);
 }
 
-bool AudioGraph::isVst3PluginLoaded() const noexcept
-{
-    return vst3Processor != nullptr && vst3Processor->isLoaded();
-}
+void AudioGraph::playPlayback() noexcept { playbackProcessor->play(); }
+void AudioGraph::pausePlayback() noexcept { playbackProcessor->pause(); }
+void AudioGraph::stopPlayback() noexcept { playbackProcessor->stop(); }
+bool AudioGraph::isPlaybackPlaying() const noexcept { return playbackProcessor->isPlaying(); }
+double AudioGraph::getPlaybackPositionSeconds() const noexcept { return playbackProcessor->getPositionSeconds(); }
+double AudioGraph::getPlaybackLengthSeconds() const noexcept { return playbackProcessor->getLengthSeconds(); }
+void AudioGraph::setPlaybackPositionSeconds (double seconds) noexcept { playbackProcessor->setPositionSeconds (seconds); }
 
-juce::String AudioGraph::getVst3PluginName() const noexcept
+int AudioGraph::getNumProcessors() const noexcept
 {
-    return vst3Processor != nullptr ? vst3Processor->getPluginName() : juce::String();
-}
-
-void AudioGraph::setVst3PluginBypassed (bool shouldBeBypassed) noexcept
-{
-    if (vst3Processor != nullptr)
-        vst3Processor->setBypassed (shouldBeBypassed);
-}
-
-bool AudioGraph::isVst3PluginBypassed() const noexcept
-{
-    return vst3Processor != nullptr && vst3Processor->isBypassed();
-}
-
-juce::AudioPluginInstance* AudioGraph::getVst3PluginInstance() const noexcept
-{
-    return vst3Processor != nullptr ? vst3Processor->getInstance() : nullptr;
+    return getTrack (0).getNumProcessors();
 }
 
 void AudioGraph::prepare (double sampleRate, int bufferSize) noexcept
 {
-    chain.prepare (sampleRate, bufferSize);
-}
+    for (auto& track : tracks)
+        track->prepare (sampleRate, bufferSize);
 
-void AudioGraph::process (float* const* channels, int numChannels, int numSamples) noexcept
-{
-    chain.process (channels, numChannels, numSamples);
+    playbackProcessor->prepare (sampleRate, bufferSize);
 }
 
 void AudioGraph::reset() noexcept
 {
-    chain.reset();
+    for (auto& track : tracks)
+        track->reset();
+
+    playbackProcessor->reset();
+}
+
+void AudioGraph::processWithInput (const float* const* inputChannels,
+                                   float* const* outputChannels,
+                                   int numChannels,
+                                   int numSamples) noexcept
+{
+    for (int channel = 0; channel < numChannels; ++channel)
+        if (outputChannels[channel] != nullptr)
+            juce::FloatVectorOperations::clear (outputChannels[channel], numSamples);
+
+    bool anyTrackSoloed = false;
+
+    for (const auto& track : tracks)
+        anyTrackSoloed = anyTrackSoloed || track->isSoloed();
+
+    for (int i = 0; i < numTracks; ++i)
+        tracks[static_cast<size_t> (i)]->process (i == 0 ? inputChannels : nullptr,
+                                                  outputChannels,
+                                                  numChannels,
+                                                  numSamples,
+                                                  anyTrackSoloed);
+
+    playbackProcessor->process (outputChannels, numChannels, numSamples);
 }
 } // namespace daw

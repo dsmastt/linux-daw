@@ -28,6 +28,7 @@ set(CORE_SOURCES
     src/PlaybackProcessor.cpp
     src/ProcessorChain.cpp
     src/ReverbProcessor.cpp
+    src/Track.cpp
     src/Vst3HostProcessor.cpp)
 
 juce_add_gui_app(linux-daw

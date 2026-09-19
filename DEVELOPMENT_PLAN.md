@@ -825,6 +825,8 @@ Add VST3 plugin management
 
 ## Milestone 23 - Track Model
 
+**Status:** Completed
+
 Introduce tracks.
 
 ```text
@@ -1349,11 +1351,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 23 - Track Model
+## Milestone 24 - Mixer
 
-Plugin management works: the GUI can browse, load, remove, bypass, and control plugins, with editor windows where supported, verified end-to-end with the built-in test plugin.
+The track model is in place: four tracks, each with volume, pan, mute, solo, and its own DSP and plugin chain, mixed to a master.
 
-The next task is to introduce tracks: each with a volume, pan, mute, solo, DSP chain, and plugin chain, mixed down to a master.
+The next task is to build the mixer UI with a channel strip per track: name, plugin list, volume, and mute/solo controls.
 
 Do not skip ahead.
 

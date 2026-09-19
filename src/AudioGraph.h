@@ -1,10 +1,12 @@
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include <juce_core/juce_core.h>
 
-#include "AudioProcessor.h"
 #include "DistortionShaper.h"
-#include "ProcessorChain.h"
+#include "Track.h"
 
 namespace juce
 {
@@ -14,22 +16,20 @@ struct PluginDescription;
 
 namespace daw
 {
-class CompressorProcessor;
-class ConvolutionProcessor;
-class DistortionProcessor;
-class GainProcessor;
-class NoiseGateProcessor;
-class ParametricEqProcessor;
 class PlaybackProcessor;
-class ReverbProcessor;
-class Vst3HostProcessor;
 
-class AudioGraph final : public AudioProcessor
+class AudioGraph
 {
 public:
-    AudioGraph();
-    ~AudioGraph() override;
+    static constexpr int numTracks = 4;
 
+    AudioGraph();
+    ~AudioGraph();
+
+    Track& getTrack (int index) { return *tracks[static_cast<size_t> (index)]; }
+    const Track& getTrack (int index) const { return *tracks[static_cast<size_t> (index)]; }
+
+    // Convenience accessors for the input track (track 0).
     void setGainDb (float gainDb) noexcept;
     float getGainDb() const noexcept;
 
@@ -65,6 +65,15 @@ public:
     void setReverbDecay (float decay) noexcept;
     void setReverbSize (float size) noexcept;
 
+    juce::String loadVst3Plugin (const juce::PluginDescription& description, double sampleRate, int bufferSize);
+    void unloadVst3Plugin() noexcept;
+    bool isVst3PluginLoaded() const noexcept;
+    juce::String getVst3PluginName() const noexcept;
+    void setVst3PluginBypassed (bool shouldBeBypassed) noexcept;
+    bool isVst3PluginBypassed() const noexcept;
+    juce::AudioPluginInstance* getVst3PluginInstance() const noexcept;
+
+    // Playback (graph-level, mixed into the master output).
     juce::String loadPlaybackFile (const juce::File& file);
     void playPlayback() noexcept;
     void pausePlayback() noexcept;
@@ -74,30 +83,18 @@ public:
     double getPlaybackLengthSeconds() const noexcept;
     void setPlaybackPositionSeconds (double seconds) noexcept;
 
-    juce::String loadVst3Plugin (const juce::PluginDescription& description, double sampleRate, int bufferSize);
-    void unloadVst3Plugin() noexcept;
-    bool isVst3PluginLoaded() const noexcept;
-    juce::String getVst3PluginName() const noexcept;
-    void setVst3PluginBypassed (bool shouldBeBypassed) noexcept;
-    bool isVst3PluginBypassed() const noexcept;
-    juce::AudioPluginInstance* getVst3PluginInstance() const noexcept;
+    int getNumProcessors() const noexcept;
 
-    int getNumProcessors() const noexcept { return chain.size(); }
+    void prepare (double sampleRate, int bufferSize) noexcept;
+    void reset() noexcept;
 
-    void prepare (double sampleRate, int bufferSize) noexcept override;
-    void process (float* const* channels, int numChannels, int numSamples) noexcept override;
-    void reset() noexcept override;
+    void processWithInput (const float* const* inputChannels,
+                           float* const* outputChannels,
+                           int numChannels,
+                           int numSamples) noexcept;
 
 private:
-    ProcessorChain chain;
-    GainProcessor* gainProcessor = nullptr;
-    NoiseGateProcessor* gateProcessor = nullptr;
-    ParametricEqProcessor* eqProcessor = nullptr;
-    CompressorProcessor* compressorProcessor = nullptr;
-    DistortionProcessor* distortionProcessor = nullptr;
-    ConvolutionProcessor* convolutionProcessor = nullptr;
-    ReverbProcessor* reverbProcessor = nullptr;
-    PlaybackProcessor* playbackProcessor = nullptr;
-    Vst3HostProcessor* vst3Processor = nullptr;
+    std::vector<std::unique_ptr<Track>> tracks;
+    std::unique_ptr<PlaybackProcessor> playbackProcessor;
 };
 } // namespace daw

@@ -100,17 +100,7 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
 
     updateMax (inputPeak, inputPeakThisBlock);
 
-    const int channelsToCopy = std::min (numInputChannelsIn, numOutputChannelsIn);
-
-    for (int i = 0; i < channelsToCopy; ++i)
-        if (inputChannelData[i] != nullptr && outputChannelData[i] != nullptr)
-            juce::FloatVectorOperations::copy (outputChannelData[i], inputChannelData[i], numSamples);
-
-    for (int i = channelsToCopy; i < numOutputChannelsIn; ++i)
-        if (outputChannelData[i] != nullptr)
-            juce::FloatVectorOperations::clear (outputChannelData[i], numSamples);
-
-    audioGraph.process (outputChannelData, numOutputChannelsIn, numSamples);
+    audioGraph.processWithInput (inputChannelData, outputChannelData, numOutputChannelsIn, numSamples);
 
     float outputPeakThisBlock = 0.0f;
 
