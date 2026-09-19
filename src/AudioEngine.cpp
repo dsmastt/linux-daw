@@ -4,6 +4,7 @@
 #include <chrono>
 
 #include "GainProcessor.h"
+#include "NoiseGateProcessor.h"
 
 namespace daw
 {
@@ -24,6 +25,10 @@ AudioEngine::AudioEngine()
     auto gain = std::make_unique<GainProcessor>();
     gainProcessor = gain.get();
     processorChain.append (std::move (gain));
+
+    auto gate = std::make_unique<NoiseGateProcessor>();
+    gateProcessor = gate.get();
+    processorChain.append (std::move (gate));
 }
 
 AudioEngine::~AudioEngine()
@@ -40,6 +45,39 @@ void AudioEngine::setGainDb (float gainDb) noexcept
 float AudioEngine::getGainDb() const noexcept
 {
     return gainProcessor != nullptr ? gainProcessor->getGainDb() : 0.0f;
+}
+
+void AudioEngine::setGateThresholdDb (float thresholdDb) noexcept
+{
+    if (gateProcessor != nullptr)
+        gateProcessor->setThresholdDb (thresholdDb);
+}
+
+float AudioEngine::getGateThresholdDb() const noexcept
+{
+    return gateProcessor != nullptr ? gateProcessor->getThresholdDb() : -60.0f;
+}
+
+void AudioEngine::setGateAttackMs (float attackMs) noexcept
+{
+    if (gateProcessor != nullptr)
+        gateProcessor->setAttackMs (attackMs);
+}
+
+float AudioEngine::getGateAttackMs() const noexcept
+{
+    return gateProcessor != nullptr ? gateProcessor->getAttackMs() : 1.0f;
+}
+
+void AudioEngine::setGateReleaseMs (float releaseMs) noexcept
+{
+    if (gateProcessor != nullptr)
+        gateProcessor->setReleaseMs (releaseMs);
+}
+
+float AudioEngine::getGateReleaseMs() const noexcept
+{
+    return gateProcessor != nullptr ? gateProcessor->getReleaseMs() : 100.0f;
 }
 
 juce::String AudioEngine::start (const juce::String& inputDeviceName,

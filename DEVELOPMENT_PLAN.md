@@ -383,6 +383,8 @@ Add DSP processing graph
 
 ## Milestone 9 - Noise Gate
 
+**Status:** Completed
+
 Add a real-time noise gate.
 
 ```text
@@ -1321,11 +1323,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 9 - Noise Gate
+## Milestone 10 - EQ
 
-The processor chain architecture is in place: a consistent `AudioProcessor` interface and an ordered `ProcessorChain` that the audio engine drives instead of hardcoded DSP.
+The noise gate works as the second chain element with threshold, attack, and release parameters.
 
-The next task is to add a real-time noise gate with threshold, attack, and release parameters as the second chain element.
+The next task is to add a multi-band parametric EQ with frequency, gain, and Q per band.
 
 Do not skip ahead.
 

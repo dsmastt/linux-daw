@@ -93,15 +93,35 @@ int runAudioEngine (const juce::ArgumentList& args)
     if (const auto value = args.getValueForOption ("--gain-db"); value.isNotEmpty())
         gainDb = value.getFloatValue();
 
+    float gateThresholdDb = -60.0f;
+
+    if (const auto value = args.getValueForOption ("--gate-threshold-db"); value.isNotEmpty())
+        gateThresholdDb = value.getFloatValue();
+
+    float gateAttackMs = 1.0f;
+
+    if (const auto value = args.getValueForOption ("--gate-attack-ms"); value.isNotEmpty())
+        gateAttackMs = value.getFloatValue();
+
+    float gateReleaseMs = 100.0f;
+
+    if (const auto value = args.getValueForOption ("--gate-release-ms"); value.isNotEmpty())
+        gateReleaseMs = value.getFloatValue();
+
     std::cout << "Input device:  " << inputDeviceName << std::endl;
     std::cout << "Output device: " << outputDeviceName << std::endl;
     std::cout << "Requested sample rate: " << static_cast<int> (sampleRate) << std::endl;
     std::cout << "Requested buffer size: " << bufferSize << std::endl;
     std::cout << "Gain: " << gainDb << " dB" << std::endl;
+    std::cout << "Gate: threshold " << gateThresholdDb << " dB, attack " << gateAttackMs
+              << " ms, release " << gateReleaseMs << " ms" << std::endl;
 
     daw::AudioEngine engine;
 
     engine.setGainDb (gainDb);
+    engine.setGateThresholdDb (gateThresholdDb);
+    engine.setGateAttackMs (gateAttackMs);
+    engine.setGateReleaseMs (gateReleaseMs);
 
     const auto error = engine.start (inputDeviceName, outputDeviceName, sampleRate, bufferSize);
 
@@ -117,7 +137,8 @@ int runAudioEngine (const juce::ArgumentList& args)
     std::cout << "Audio running: sample rate " << engine.getSampleRate()
               << ", buffer size " << engine.getBufferSize()
               << ", input channels " << engine.getNumInputChannels()
-              << ", output channels " << engine.getNumOutputChannels() << std::endl;
+              << ", output channels " << engine.getNumOutputChannels()
+              << ", processors " << engine.getNumProcessors() << std::endl;
     std::cout << "Latency: " << engine.getInputLatencySamples() << " in + "
               << engine.getOutputLatencySamples() << " out samples = " << latencyMs << " ms" << std::endl;
 
