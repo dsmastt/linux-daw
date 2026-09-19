@@ -5,14 +5,16 @@
 
 #include <juce_audio_devices/juce_audio_devices.h>
 
-#include "GainProcessor.h"
+#include "ProcessorChain.h"
 
 namespace daw
 {
+class GainProcessor;
+
 class AudioEngine final : public juce::AudioIODeviceCallback
 {
 public:
-    AudioEngine() = default;
+    AudioEngine();
     ~AudioEngine() override;
 
     juce::String start (const juce::String& inputDeviceName,
@@ -22,8 +24,8 @@ public:
 
     void stop();
 
-    void setGainDb (float gainDb) noexcept { gain.setGainDb (gainDb); }
-    float getGainDb() const noexcept { return gain.getGainDb(); }
+    void setGainDb (float gainDb) noexcept;
+    float getGainDb() const noexcept;
 
     bool isRunning() const noexcept { return running.load(); }
     double getSampleRate() const noexcept { return sampleRate.load(); }
@@ -64,6 +66,7 @@ private:
 
     juce::AudioIODevice* currentDevice = nullptr;
     int callbacksSinceXRunCheck = 0;
-    GainProcessor gain;
+    ProcessorChain processorChain;
+    GainProcessor* gainProcessor = nullptr;
 };
 } // namespace daw

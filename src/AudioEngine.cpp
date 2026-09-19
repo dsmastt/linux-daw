@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <chrono>
 
+#include "GainProcessor.h"
+
 namespace daw
 {
 namespace
@@ -17,9 +19,27 @@ void updateMax (std::atomic<double>& target, double value)
 }
 } // namespace
 
+AudioEngine::AudioEngine()
+{
+    auto gain = std::make_unique<GainProcessor>();
+    gainProcessor = gain.get();
+    processorChain.append (std::move (gain));
+}
+
 AudioEngine::~AudioEngine()
 {
     stop();
+}
+
+void AudioEngine::setGainDb (float gainDb) noexcept
+{
+    if (gainProcessor != nullptr)
+        gainProcessor->setGainDb (gainDb);
+}
+
+float AudioEngine::getGainDb() const noexcept
+{
+    return gainProcessor != nullptr ? gainProcessor->getGainDb() : 0.0f;
 }
 
 juce::String AudioEngine::start (const juce::String& inputDeviceName,
@@ -81,7 +101,7 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
         if (outputChannelData[i] != nullptr)
             juce::FloatVectorOperations::clear (outputChannelData[i], numSamples);
 
-    gain.process (outputChannelData, numOutputChannelsIn, numSamples);
+    processorChain.process (outputChannelData, numOutputChannelsIn, numSamples);
 
     const auto elapsedMs = std::chrono::duration<double, std::milli> (std::chrono::steady_clock::now() - startTime).count();
 
@@ -108,8 +128,8 @@ void AudioEngine::audioDeviceAboutToStart (juce::AudioIODevice* device)
     numInputChannels.store (device->getActiveInputChannels().countNumberOfSetBits());
     numOutputChannels.store (device->getActiveOutputChannels().countNumberOfSetBits());
 
-    gain.setSampleRate (device->getCurrentSampleRate());
-    gain.reset();
+    processorChain.prepare (device->getCurrentSampleRate(), device->getCurrentBufferSizeSamples());
+    processorChain.reset();
 }
 
 void AudioEngine::audioDeviceStopped()

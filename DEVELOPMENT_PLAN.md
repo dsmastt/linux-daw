@@ -336,6 +336,8 @@ Add gain processor
 
 ## Milestone 8 - Processing Chain
 
+**Status:** Completed
+
 ### Goal
 
 Stop hardcoding DSP into the audio callback.
@@ -1319,11 +1321,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 8 - Processing Chain
+## Milestone 9 - Noise Gate
 
-The gain processor works with lock-free parameter changes and smoothed, allocation-free processing.
+The processor chain architecture is in place: a consistent `AudioProcessor` interface and an ordered `ProcessorChain` that the audio engine drives instead of hardcoded DSP.
 
-The next task is to stop hardcoding DSP into the audio callback: create a consistent processor interface and an ordered processing graph that the audio engine drives.
+The next task is to add a real-time noise gate with threshold, attack, and release parameters as the second chain element.
 
 Do not skip ahead.
 

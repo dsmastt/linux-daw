@@ -2,18 +2,21 @@
 
 #include <atomic>
 
+#include "AudioProcessor.h"
+
 namespace daw
 {
-class GainProcessor
+class GainProcessor final : public AudioProcessor
 {
 public:
     void setGainDb (float gainDb) noexcept;
     float getGainDb() const noexcept;
 
     void setSampleRate (double sampleRate) noexcept;
-    void reset() noexcept;
 
-    void process (float* const* channels, int numChannels, int numSamples) noexcept;
+    void prepare (double sampleRate, int bufferSize) noexcept override;
+    void process (float* const* channels, int numChannels, int numSamples) noexcept override;
+    void reset() noexcept override;
 
 private:
     static float gainDbToLinear (float gainDb) noexcept;

@@ -27,6 +27,11 @@ void GainProcessor::setSampleRate (double sampleRate) noexcept
         smoothingCoefficient = 1.0f;
 }
 
+void GainProcessor::prepare (double sampleRate, int) noexcept
+{
+    setSampleRate (sampleRate);
+}
+
 void GainProcessor::reset() noexcept
 {
     currentGain = targetGain.load (std::memory_order_relaxed);
