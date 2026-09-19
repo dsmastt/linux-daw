@@ -334,6 +334,23 @@ void MainComponent::updateStatus()
 
     juce::String status;
 
+    const auto& track = engine.getAudioGraph().getTrack (0);
+    const auto periodMs = (1000.0 * engine.getBufferSize()) / engine.getSampleRate();
+    juce::String worstProcessor = "-";
+    double worstShare = 0.0;
+
+    for (int i = 0; i < track.getMeasuredProcessorCount(); ++i)
+    {
+        const auto callbacks = engine.getNumCallbacks();
+        const auto avgMs = callbacks > 0 ? track.getProcessorTotalTimeMs (i) / callbacks : 0.0;
+
+        if (avgMs > worstShare)
+        {
+            worstShare = avgMs;
+            worstProcessor = track.getProcessorName (i);
+        }
+    }
+
     status << "Running\n"
            << "Sample rate: " << static_cast<int> (engine.getSampleRate()) << " Hz\n"
            << "Buffer size: " << engine.getBufferSize() << " samples\n"
@@ -341,7 +358,19 @@ void MainComponent::updateStatus()
            << engine.getNumOutputChannels() << " out\n"
            << "Latency: " << latencyMs << " ms\n"
            << "Xruns: " << engine.getXRunCount() << "\n"
-           << "Callbacks: " << engine.getNumCallbacks();
+           << "Callbacks: " << engine.getNumCallbacks() << "\n"
+           << "Heaviest DSP: " << worstProcessor;
+
+    if (worstShare > 0.0 && periodMs > 0.0)
+        status << " (" << static_cast<int> (100.0 * worstShare / periodMs) << "% of period)";
+
+    const auto memoryMb = juce::File ("/proc/self/status").loadFileAsString()
+                              .fromFirstOccurrenceOf ("VmRSS:", false, false)
+                              .upToFirstOccurrenceOf ("kB", false, false)
+                              .trim()
+                              .getIntValue() / 1024;
+
+    status << "\nMemory: " << memoryMb << " MB";
 
     statusLabel.setText (status, juce::dontSendNotification);
 }

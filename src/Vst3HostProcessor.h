@@ -13,6 +13,7 @@ namespace daw
 class Vst3HostProcessor final : public AudioProcessor
 {
 public:
+    juce::String getName() const override { return "VST3 Plugin"; }
     juce::String loadPlugin (const juce::PluginDescription& description, double sampleRate, int bufferSize);
     void unloadPlugin() noexcept;
 

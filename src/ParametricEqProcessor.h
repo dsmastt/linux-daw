@@ -9,6 +9,7 @@ namespace daw
 class ParametricEqProcessor final : public AudioProcessor
 {
 public:
+    juce::String getName() const override { return "EQ"; }
     static constexpr int maxBands = 4;
 
     void setBandParameters (int band, double frequencyHz, float gainDb, float q) noexcept;

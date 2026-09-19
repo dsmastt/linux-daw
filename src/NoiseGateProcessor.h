@@ -9,6 +9,7 @@ namespace daw
 class NoiseGateProcessor final : public AudioProcessor
 {
 public:
+    juce::String getName() const override { return "Gate"; }
     void setThresholdDb (float thresholdDb) noexcept;
     float getThresholdDb() const noexcept;
 

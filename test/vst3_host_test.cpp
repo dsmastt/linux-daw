@@ -485,6 +485,26 @@ int runTest (const juce::ArgumentList& args)
 
     std::cout << "Undo/redo " << (undoOk1 && undoOk2 && redoOk ? "passed" : "FAILED") << std::endl;
 
+    // Performance profiling report.
+    const auto& profilingTrack = graph.getTrack (0);
+
+    std::cout << "Per-processor DSP cost (track 0):" << std::endl;
+
+    bool profilingOk = false;
+
+    for (int i = 0; i < profilingTrack.getMeasuredProcessorCount(); ++i)
+    {
+        const auto totalMs = profilingTrack.getProcessorTotalTimeMs (i);
+        const auto callbacksCount = engine.getNumCallbacks();
+        const auto avgMs = callbacksCount > 0 ? totalMs / callbacksCount : 0.0;
+
+        std::cout << "  " << profilingTrack.getProcessorName (i) << ": avg " << avgMs
+                  << " ms, max " << profilingTrack.getProcessorMaxTimeMs (i) << " ms" << std::endl;
+
+        if (profilingTrack.getProcessorName (i) == "VST3 Plugin" && totalMs > 0.0)
+            profilingOk = true;
+    }
+
     // MIDI round-trip test via virtual devices.
     const auto midiOpenError = engine.openVirtualMidiDevice ("linux-daw-test-midi");
 
@@ -529,7 +549,8 @@ int runTest (const juce::ArgumentList& args)
     engine.closeMidiDevice();
 
     if (callbacks == 0 || xruns != 0 || !transportOk || !clipsOk || !midiOk || !midiTrackOk
-        || !volumeAutomationOk || !pluginAutomationOk || !roundTripOk || !undoOk1 || !undoOk2 || !redoOk)
+        || !volumeAutomationOk || !pluginAutomationOk || !roundTripOk || !undoOk1 || !undoOk2 || !redoOk
+        || !profilingOk)
     {
         std::cout << "VST3 host test FAILED" << std::endl;
         return 1;

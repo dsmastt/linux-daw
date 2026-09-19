@@ -1090,6 +1090,8 @@ Add undo and redo
 
 ## Milestone 33 - Audio Performance Profiling
 
+**Status:** Completed
+
 Measure:
 
 * callback execution time
@@ -1369,11 +1371,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 33 - Audio Performance Profiling
+## Milestone 34 - Background Processing
 
-Undo/redo works for project-state operations through snapshot-based state restoration, wired into all mutating GUI actions with Ctrl+Z/Ctrl+Shift+Z shortcuts.
+Performance profiling works: callback timing, audio-thread duty, per-processor DSP cost, plugin cost, memory usage, underruns, and latency are all measurable.
 
-The next task is to measure audio performance: callback execution time, CPU usage, DSP cost, plugin cost, memory usage, underruns, and latency.
+The next task is to move non-real-time work off the audio thread: file loading, sample preparation, and plugin scanning.
 
 Do not skip ahead.
 

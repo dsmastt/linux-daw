@@ -13,6 +13,7 @@ namespace daw
 class PlaybackProcessor final : public AudioProcessor
 {
 public:
+    juce::String getName() const override { return "Playback"; }
     juce::String loadFile (const juce::File& file);
     void clearFile() noexcept;
 

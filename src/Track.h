@@ -105,6 +105,11 @@ public:
 
     int getNumProcessors() const noexcept { return chain.size(); }
 
+    int getMeasuredProcessorCount() const noexcept { return chain.getMeasuredProcessorCount(); }
+    juce::String getProcessorName (int index) const noexcept { return chain.getProcessorName (index); }
+    double getProcessorTotalTimeMs (int index) const noexcept { return chain.getProcessorTotalTimeMs (index); }
+    double getProcessorMaxTimeMs (int index) const noexcept { return chain.getProcessorMaxTimeMs (index); }
+
     void resetParameters() noexcept;
 
     int addClip (std::int64_t startSamples, std::int64_t lengthSamples, std::int64_t sourceOffsetSamples = 0);

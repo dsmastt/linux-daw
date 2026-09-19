@@ -10,6 +10,7 @@ namespace daw
 class DistortionProcessor final : public AudioProcessor
 {
 public:
+    juce::String getName() const override { return "Distortion"; }
     void setDriveDb (float driveDb) noexcept;
     float getDriveDb() const noexcept;
 

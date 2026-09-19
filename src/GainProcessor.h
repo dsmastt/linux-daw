@@ -9,6 +9,7 @@ namespace daw
 class GainProcessor final : public AudioProcessor
 {
 public:
+    juce::String getName() const override { return "Gain"; }
     void setGainDb (float gainDb) noexcept;
     float getGainDb() const noexcept;
 

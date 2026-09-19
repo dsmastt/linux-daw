@@ -15,6 +15,7 @@ namespace daw
 class ConvolutionProcessor final : public AudioProcessor
 {
 public:
+    juce::String getName() const override { return "Convolution"; }
     juce::String loadImpulseResponse (const juce::File& file);
     void clearImpulseResponse();
 

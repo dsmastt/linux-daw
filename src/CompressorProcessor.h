@@ -9,6 +9,7 @@ namespace daw
 class CompressorProcessor final : public AudioProcessor
 {
 public:
+    juce::String getName() const override { return "Compressor"; }
     void setThresholdDb (float thresholdDb) noexcept;
     float getThresholdDb() const noexcept;
 

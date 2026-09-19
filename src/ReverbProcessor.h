@@ -10,6 +10,7 @@ namespace daw
 class ReverbProcessor final : public AudioProcessor
 {
 public:
+    juce::String getName() const override { return "Reverb"; }
     static constexpr int maxChannels = 2;
     static constexpr int numCombs = 8;
     static constexpr int numAllPasses = 2;
