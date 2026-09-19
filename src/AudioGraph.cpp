@@ -95,6 +95,10 @@ bool AudioGraph::isPlaybackPlaying() const noexcept { return playbackProcessor->
 double AudioGraph::getPlaybackPositionSeconds() const noexcept { return playbackProcessor->getPositionSeconds(); }
 double AudioGraph::getPlaybackLengthSeconds() const noexcept { return playbackProcessor->getLengthSeconds(); }
 std::int64_t AudioGraph::getPlaybackLengthFrames() const noexcept { return playbackProcessor->getPreparedFrames(); }
+
+const float* AudioGraph::getPlaybackSourceData() const noexcept { return playbackProcessor->getSourceData(); }
+std::int64_t AudioGraph::getPlaybackSourceFrames() const noexcept { return playbackProcessor->getSourceFrames(); }
+int AudioGraph::getPlaybackSourceChannels() const noexcept { return playbackProcessor->getSourceChannels(); }
 void AudioGraph::setPlaybackPositionSeconds (double seconds) noexcept { playbackProcessor->setPositionSeconds (seconds); }
 
 void AudioGraph::playTransport() noexcept

@@ -136,6 +136,11 @@ int PlaybackProcessor::getPreparedChannels() const noexcept
     return prepared[activeIndex.load (std::memory_order_acquire)].channels;
 }
 
+std::int64_t PlaybackProcessor::getSourceFrames() const noexcept
+{
+    return sourceChannels > 0 ? static_cast<std::int64_t> (sourceData.size()) / sourceChannels : 0;
+}
+
 void PlaybackProcessor::prepare (double sampleRate, int) noexcept
 {
     numChannels = maxChannels;

@@ -1143,6 +1143,8 @@ Add background processing architecture
 
 ## Milestone 35 - Waveform Generation
 
+**Status:** Completed
+
 Display audio waveforms for clips.
 
 ### Requirements
@@ -1373,11 +1375,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 35 - Waveform Generation
+## Milestone 36 - Audio Routing
 
-Background processing works: IR partition building, playback resampling, and plugin scanning all run off the audio thread with double-buffered publication.
+Waveform generation works: clip waveforms render from a background-generated peak cache with zooming.
 
-The next task is to display audio waveforms for clips: background waveform generation, cached waveform data, efficient rendering, and zooming.
+The next task is to support audio routing: tracks routing to buses, sends, and the master.
 
 Do not skip ahead.
 

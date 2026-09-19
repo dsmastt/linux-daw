@@ -7,7 +7,8 @@ namespace daw
 TimelineComponent::TimelineComponent (AudioEngine& engineToUse, UndoManager& undoToUse)
     : engine (engineToUse),
       graph (engineToUse.getAudioGraph()),
-      undo (undoToUse)
+      undo (undoToUse),
+      waveformPool (1)
 {
     loadFileButton.setButtonText ("Load Clip File...");
     loadFileButton.onClick = [this] { loadClipFile(); };
@@ -42,6 +43,18 @@ TimelineComponent::TimelineComponent (AudioEngine& engineToUse, UndoManager& und
     statusText.setText ("No clip file loaded", juce::dontSendNotification);
     addAndMakeVisible (statusText);
 
+    zoomLabel.setText ("Zoom:", juce::dontSendNotification);
+    addAndMakeVisible (zoomLabel);
+
+    zoomSlider.setRange (10.0, 200.0, 1.0);
+    zoomSlider.setValue (pixelsPerSecond, juce::dontSendNotification);
+    zoomSlider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 48, 22);
+    zoomSlider.onValueChange = [this]
+    {
+        zoomPixelsPerSecond.store (static_cast<float> (zoomSlider.getValue()));
+    };
+    addAndMakeVisible (zoomSlider);
+
     startTimerHz (10);
 }
 
@@ -53,7 +66,7 @@ TimelineComponent::~TimelineComponent()
 double TimelineComponent::getPixelsPerSample() const noexcept
 {
     const double rate = engine.isRunning() && engine.getSampleRate() > 0.0 ? engine.getSampleRate() : 48000.0;
-    return pixelsPerSecond / rate;
+    return zoomPixelsPerSecond.load() / rate;
 }
 
 void TimelineComponent::resized()
@@ -68,6 +81,9 @@ void TimelineComponent::resized()
     addClipButton.setBounds (controlRow.removeFromLeft (90));
     controlRow.removeFromLeft (8);
     deleteClipButton.setBounds (controlRow.removeFromLeft (90));
+    controlRow.removeFromLeft (8);
+    zoomLabel.setBounds (controlRow.removeFromLeft (46));
+    zoomSlider.setBounds (controlRow.removeFromLeft (110));
     controlRow.removeFromLeft (8);
     statusText.setBounds (controlRow);
 }
@@ -127,6 +143,37 @@ void TimelineComponent::paint (juce::Graphics& g)
 
             g.setColour (isSelected ? juce::Colours::lightblue : juce::Colours::steelblue);
             g.fillRect (clipX, rowTop + 4.0f, clipWidth, static_cast<float> (rowHeight - 8));
+
+            if (waveformReady.load() && !waveformPeaks.empty() && clipWidth > 4.0f)
+            {
+                const auto sourceFrames = graph.getPlaybackSourceFrames();
+
+                if (sourceFrames > 0)
+                {
+                    const auto sourceOffset = clip.sourceOffsetSamples.load();
+                    const auto clipLength = clip.lengthSamples.load();
+
+                    g.setColour (juce::Colours::darkblue.withAlpha (0.85f));
+
+                    const int pixelWidth = std::max (1, static_cast<int> (clipWidth));
+
+                    for (int pixel = 0; pixel < pixelWidth; ++pixel)
+                    {
+                        const auto sourcePosition = sourceOffset + static_cast<std::int64_t> ((pixel / clipWidth) * clipLength);
+                        const auto bucket = (sourcePosition * waveformBuckets) / sourceFrames;
+
+                        if (bucket < 0 || bucket >= waveformBuckets)
+                            continue;
+
+                        const float peak = waveformPeaks[static_cast<size_t> (bucket)];
+                        const float halfHeight = peak * static_cast<float> (rowHeight - 12) * 0.5f;
+                        const float centreY = rowTop + static_cast<float> (rowHeight) * 0.5f;
+                        const float x = clipX + pixel;
+
+                        g.drawVerticalLine (static_cast<int> (x), centreY - halfHeight, centreY + halfHeight);
+                    }
+                }
+            }
 
             g.setColour (isSelected ? juce::Colours::white : juce::Colours::black);
             g.drawRect (clipX, rowTop + 4.0f, clipWidth, static_cast<float> (rowHeight - 8));
@@ -296,6 +343,8 @@ void TimelineComponent::loadClipFile()
                                       return;
                                   }
 
+                                  startWaveformGeneration();
+
                                   statusText.setText ("Loaded: " + result.getFileName(), juce::dontSendNotification);
                               });
                           });
@@ -334,5 +383,57 @@ void TimelineComponent::deleteSelectedClip()
 
     selectedClip = -1;
     deleteClipButton.setEnabled (false);
+}
+void TimelineComponent::startWaveformGeneration()
+{
+    waveformReady.store (false, std::memory_order_release);
+    waveformFilePath = graph.getPlaybackFilePath();
+
+    const juce::Component::SafePointer<TimelineComponent> safeThis (this);
+
+    waveformPool.addJob ([safeThis]
+    {
+        if (safeThis == nullptr)
+            return true;
+
+        auto* graphToUse = &safeThis->graph;
+        const auto* data = graphToUse->getPlaybackSourceData();
+        const auto frames = graphToUse->getPlaybackSourceFrames();
+        const auto channels = graphToUse->getPlaybackSourceChannels();
+
+        std::vector<float> peaks;
+
+        if (data != nullptr && frames > 0 && channels > 0)
+        {
+            peaks.assign (waveformBuckets, 0.0f);
+
+            const auto framesPerBucket = std::max<std::int64_t> (1, frames / waveformBuckets);
+
+            for (std::int64_t bucket = 0; bucket < waveformBuckets; ++bucket)
+            {
+                const auto startFrame = bucket * framesPerBucket;
+                const auto endFrame = std::min (frames, startFrame + framesPerBucket);
+
+                float maxAbs = 0.0f;
+
+                for (std::int64_t frame = startFrame; frame < endFrame; frame += 8)
+                    maxAbs = std::max (maxAbs, std::abs (data[static_cast<size_t> (frame * channels)]));
+
+                peaks[static_cast<size_t> (bucket)] = maxAbs;
+            }
+        }
+
+        juce::MessageManager::callAsync ([safeThis, peaks = std::move (peaks)]
+        {
+            if (safeThis == nullptr)
+                return;
+
+            safeThis->waveformPeaks = peaks;
+            safeThis->waveformReady.store (true, std::memory_order_release);
+            safeThis->repaint();
+        });
+
+        return true;
+    });
 }
 } // namespace daw

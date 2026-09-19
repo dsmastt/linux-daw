@@ -26,12 +26,14 @@ private:
     static constexpr float pixelsPerSecond = 40.0f;
     static constexpr int gutterWidth = 64;
     static constexpr int rowHeight = 48;
+    static constexpr int waveformBuckets = 512;
 
     double getPixelsPerSample() const noexcept;
 
     void loadClipFile();
     void addClipToSelectedTrack();
     void deleteSelectedClip();
+    void startWaveformGeneration();
 
     int trackIndexAtY (int y) const noexcept;
     int hitTestClip (int trackIndex, int x, int y, bool& onResizeEdge) const noexcept;
@@ -45,6 +47,15 @@ private:
     juce::TextButton addClipButton;
     juce::TextButton deleteClipButton;
     juce::TextEditor statusText;
+
+    juce::Label zoomLabel;
+    juce::Slider zoomSlider;
+    std::atomic<float> zoomPixelsPerSecond { pixelsPerSecond };
+
+    juce::ThreadPool waveformPool;
+    std::vector<float> waveformPeaks;
+    std::atomic<bool> waveformReady { false };
+    juce::String waveformFilePath;
 
     int selectedTrack = -1;
     int selectedClip = -1;

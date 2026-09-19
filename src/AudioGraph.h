@@ -98,6 +98,9 @@ public:
     double getPlaybackPositionSeconds() const noexcept;
     double getPlaybackLengthSeconds() const noexcept;
     std::int64_t getPlaybackLengthFrames() const noexcept;
+    const float* getPlaybackSourceData() const noexcept;
+    std::int64_t getPlaybackSourceFrames() const noexcept;
+    int getPlaybackSourceChannels() const noexcept;
     void setPlaybackPositionSeconds (double seconds) noexcept;
 
     // Transport.

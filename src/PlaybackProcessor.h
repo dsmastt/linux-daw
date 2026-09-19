@@ -41,6 +41,10 @@ public:
     std::int64_t getPreparedFrames() const noexcept;
     int getPreparedChannels() const noexcept;
 
+    const float* getSourceData() const noexcept { return sourceData.empty() ? nullptr : sourceData.data(); }
+    std::int64_t getSourceFrames() const noexcept;
+    int getSourceChannels() const noexcept { return sourceChannels; }
+
     void prepare (double sampleRate, int bufferSize) noexcept override;
     void process (float* const* channels, int numChannels, int numSamples) noexcept override;
     void reset() noexcept override;
