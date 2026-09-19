@@ -95,6 +95,8 @@ public:
 
     int getNumProcessors() const noexcept;
 
+    void resetToDefaults() noexcept;
+
     void prepare (double sampleRate, int bufferSize) noexcept;
     void reset() noexcept;
 

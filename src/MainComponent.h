@@ -23,6 +23,8 @@ public:
     void resized() override;
     void timerCallback() override;
 
+    AudioEngine& getEngine() noexcept { return engine; }
+
 private:
     void refreshDevices();
     void startAudio();

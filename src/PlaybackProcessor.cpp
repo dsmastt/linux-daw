@@ -47,6 +47,24 @@ juce::String PlaybackProcessor::loadFile (const juce::File& file)
     return {};
 }
 
+void PlaybackProcessor::clearFile() noexcept
+{
+    sourceData.clear();
+    sourceSampleRate = 0.0;
+    sourceChannels = 0;
+    loadedFilePath.clear();
+
+    playbackData.clear();
+    playbackChannels = 0;
+    playbackFrames = 0;
+    playbackSampleRate = 0.0;
+
+    playing.store (false, std::memory_order_relaxed);
+    position.store (0, std::memory_order_relaxed);
+    pendingPositionSeconds.store (-1.0, std::memory_order_relaxed);
+    prepared = false;
+}
+
 void PlaybackProcessor::play() noexcept
 {
     playing.store (true, std::memory_order_relaxed);

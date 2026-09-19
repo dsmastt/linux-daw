@@ -16,12 +16,14 @@ public:
     void initialise (const juce::String& commandLine) override
     {
         juce::ignoreUnused (commandLine);
-        mainWindow = std::make_unique<daw::MainWindow>();
+        content = std::make_unique<daw::MainComponent>();
+        mainWindow = std::make_unique<daw::MainWindow> (*content);
     }
 
     void shutdown() override
     {
         mainWindow.reset();
+        content.reset();
     }
 
     void systemRequestedQuit() override
@@ -35,6 +37,7 @@ public:
     }
 
 private:
+    std::unique_ptr<daw::MainComponent> content;
     std::unique_ptr<daw::MainWindow> mainWindow;
 };
 } // namespace

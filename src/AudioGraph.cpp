@@ -104,6 +104,15 @@ int AudioGraph::getNumProcessors() const noexcept
     return getTrack (0).getNumProcessors();
 }
 
+void AudioGraph::resetToDefaults() noexcept
+{
+    stopTransport();
+    playbackProcessor->clearFile();
+
+    for (auto& track : tracks)
+        track->resetParameters();
+}
+
 void AudioGraph::prepare (double sampleRate, int bufferSize) noexcept
 {
     for (auto& track : tracks)

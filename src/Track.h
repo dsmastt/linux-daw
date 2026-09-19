@@ -105,6 +105,8 @@ public:
 
     int getNumProcessors() const noexcept { return chain.size(); }
 
+    void resetParameters() noexcept;
+
     int addClip (std::int64_t startSamples, std::int64_t lengthSamples, std::int64_t sourceOffsetSamples = 0);
     void removeClip (int clipIndex) noexcept;
     void moveClip (int clipIndex, std::int64_t newStartSamples) noexcept;

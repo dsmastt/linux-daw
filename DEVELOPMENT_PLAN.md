@@ -1043,6 +1043,8 @@ Add project file format
 
 ## Milestone 31 - Project Persistence
 
+**Status:** Completed
+
 Implement:
 
 * new project
@@ -1365,11 +1367,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 31 - Project Persistence
+## Milestone 32 - Undo System
 
-The project format works: tracks, clips, plugin state, DSP parameters, automation, routing, and metadata serialize to JSON with relative paths, verified with a full save/load round-trip.
+Project persistence works: new project, save, save as, and load through the menu bar with keyboard shortcuts, with error reporting that keeps the current session alive.
 
-The next task is to implement new project, save, save as, load, and project recovery handling in the application.
+The next task is to add undo/redo for project-state operations such as moving clips, changing parameters, and adding or removing plugins.
 
 Do not skip ahead.
 

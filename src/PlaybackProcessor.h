@@ -14,6 +14,7 @@ class PlaybackProcessor final : public AudioProcessor
 {
 public:
     juce::String loadFile (const juce::File& file);
+    void clearFile() noexcept;
 
     juce::String getLoadedFilePath() const noexcept { return loadedFilePath; }
 

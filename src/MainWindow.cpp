@@ -1,22 +1,184 @@
 #include "MainWindow.h"
 
+#include "Project.h"
+
 namespace daw
 {
-MainWindow::MainWindow()
+MainWindow::MainWindow (MainComponent& contentToOwn)
     : juce::DocumentWindow ("Linux DAW",
                             juce::Desktop::getInstance().getDefaultLookAndFeel()
                                 .findColour (juce::ResizableWindow::backgroundColourId),
-                            juce::DocumentWindow::allButtons)
+                            juce::DocumentWindow::allButtons),
+      content (contentToOwn)
 {
     setUsingNativeTitleBar (true);
-    setContentOwned (new MainComponent(), true);
+    setContentOwned (&contentToOwn, false);
     setResizable (true, true);
-    centreWithSize (800, 880);
+    setMenuBar (this);
+    centreWithSize (800, 900);
     setVisible (true);
+
+    contentToOwn.addToDesktop (0, this);
+}
+
+MainWindow::~MainWindow()
+{
+    setMenuBar (nullptr);
+    content.addToDesktop (0, nullptr);
 }
 
 void MainWindow::closeButtonPressed()
 {
     juce::JUCEApplicationBase::quit();
+}
+
+juce::StringArray MainWindow::getMenuBarNames()
+{
+    return { "File" };
+}
+
+juce::PopupMenu MainWindow::getMenuForIndex (int, const juce::String&)
+{
+    juce::PopupMenu menu;
+
+    menu.addItem (menuNewProject, "New Project");
+    menu.addItem (menuOpenProject, "Open Project...");
+    menu.addSeparator();
+    menu.addItem (menuSaveProject, "Save Project");
+    menu.addItem (menuSaveProjectAs, "Save Project As...");
+
+    return menu;
+}
+
+void MainWindow::menuItemSelected (int menuItemId, int)
+{
+    switch (menuItemId)
+    {
+        case menuNewProject:    newProject(); break;
+        case menuOpenProject:   openProject(); break;
+        case menuSaveProject:   saveProject(); break;
+        case menuSaveProjectAs: saveProjectAs(); break;
+        default: break;
+    }
+}
+
+bool MainWindow::keyPressed (const juce::KeyPress& key)
+{
+    if (key == juce::KeyPress ('n', juce::ModifierKeys::ctrlModifier, 0))
+    {
+        newProject();
+        return true;
+    }
+
+    if (key == juce::KeyPress ('o', juce::ModifierKeys::ctrlModifier, 0))
+    {
+        openProject();
+        return true;
+    }
+
+    if (key == juce::KeyPress ('s', juce::ModifierKeys::ctrlModifier | juce::ModifierKeys::shiftModifier, 0))
+    {
+        saveProjectAs();
+        return true;
+    }
+
+    if (key == juce::KeyPress ('s', juce::ModifierKeys::ctrlModifier, 0))
+    {
+        saveProject();
+        return true;
+    }
+
+    return false;
+}
+
+void MainWindow::newProject()
+{
+    content.getEngine().getAudioGraph().resetToDefaults();
+    currentProjectFile = juce::File();
+    setName ("Linux DAW");
+}
+
+void MainWindow::openProject()
+{
+    auto chooser = std::make_shared<juce::FileChooser> ("Open Project", juce::File(), "*.ldaw");
+
+    chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+                          [this] (const juce::FileChooser& fc)
+                          {
+                              const auto result = fc.getResult();
+
+                              juce::MessageManager::callAsync ([this, result]
+                              {
+                                  if (result == juce::File())
+                                      return;
+
+                                  const auto error = Project::load (result, content.getEngine().getAudioGraph());
+
+                                  if (error.isNotEmpty())
+                                  {
+                                      showError ("Open Project", error);
+                                      return;
+                                  }
+
+                                  currentProjectFile = result;
+                                  setName ("Linux DAW - " + result.getFileName());
+                              });
+                          });
+}
+
+void MainWindow::saveProject()
+{
+    if (currentProjectFile == juce::File())
+    {
+        saveProjectAs();
+        return;
+    }
+
+    const auto error = Project::save (currentProjectFile, content.getEngine().getAudioGraph());
+
+    if (error.isNotEmpty())
+        showError ("Save Project", error);
+}
+
+void MainWindow::saveProjectAs()
+{
+    auto chooser = std::make_shared<juce::FileChooser> ("Save Project As",
+                                                        currentProjectFile == juce::File()
+                                                            ? juce::File ("untitled.ldaw")
+                                                            : currentProjectFile,
+                                                        "*.ldaw");
+
+    chooser->launchAsync (juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::warnAboutOverwriting,
+                          [this] (const juce::FileChooser& fc)
+                          {
+                              auto result = fc.getResult();
+
+                              if (result.getFileExtension().isEmpty())
+                                  result = result.withFileExtension ("ldaw");
+
+                              juce::MessageManager::callAsync ([this, result]
+                              {
+                                  if (result == juce::File())
+                                      return;
+
+                                  const auto error = Project::save (result, content.getEngine().getAudioGraph());
+
+                                  if (error.isNotEmpty())
+                                  {
+                                      showError ("Save Project", error);
+                                      return;
+                                  }
+
+                                  currentProjectFile = result;
+                                  setName ("Linux DAW - " + result.getFileName());
+                              });
+                          });
+}
+
+void MainWindow::showError (const juce::String& title, const juce::String& message)
+{
+    juce::AlertWindow::showMessageBoxAsync (juce::MessageBoxIconType::WarningIcon,
+                                            title,
+                                            message);
 }
 } // namespace daw

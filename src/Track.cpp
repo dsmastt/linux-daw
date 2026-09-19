@@ -612,6 +612,48 @@ void Track::applyAutomation (std::int64_t transportPositionSamples) noexcept
     }
 }
 
+void Track::resetParameters() noexcept
+{
+    setVolumeDb (0.0f);
+    setPan (0.0f);
+    setMuted (false);
+    setSoloed (false);
+
+    setGainDb (0.0f);
+    setGateThresholdDb (-60.0f);
+    setGateAttackMs (1.0f);
+    setGateReleaseMs (100.0f);
+
+    for (int band = 0; band < getNumEqBands(); ++band)
+        setEqBandParameters (band, 1000.0, 0.0f, 0.7f);
+
+    setCompressorThresholdDb (-10.0f);
+    setCompressorRatio (4.0f);
+    setCompressorAttackMs (5.0f);
+    setCompressorReleaseMs (100.0f);
+    setCompressorMakeupGainDb (0.0f);
+
+    setDistortionDriveDb (12.0f);
+    setDistortionTone (0.5f);
+    setDistortionMode (DistortionMode::soft);
+
+    setReverbWetDry (0.2f);
+    setReverbDecay (0.5f);
+    setReverbSize (0.5f);
+
+    clearImpulseResponse();
+    unloadVst3Plugin();
+
+    clipCount.store (0, std::memory_order_release);
+    midiEventCount.store (0, std::memory_order_release);
+    automationCurveCount.store (0, std::memory_order_release);
+
+    volumeAutomationDb = 0.0f;
+    panAutomation = 0.0f;
+    gainAutomationDb = 0.0f;
+    gainDbBase = 0.0f;
+}
+
 void Track::prepare (double sampleRate, int bufferSize) noexcept
 {
     numChannels = maxChannels;
