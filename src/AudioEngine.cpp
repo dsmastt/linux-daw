@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 
+#include "CompressorProcessor.h"
 #include "GainProcessor.h"
 #include "NoiseGateProcessor.h"
 #include "ParametricEqProcessor.h"
@@ -34,6 +35,10 @@ AudioEngine::AudioEngine()
     auto eq = std::make_unique<ParametricEqProcessor>();
     eqProcessor = eq.get();
     processorChain.append (std::move (eq));
+
+    auto compressor = std::make_unique<CompressorProcessor>();
+    compressorProcessor = compressor.get();
+    processorChain.append (std::move (compressor));
 }
 
 AudioEngine::~AudioEngine()
@@ -94,6 +99,36 @@ void AudioEngine::setEqBandParameters (int band, double frequencyHz, float gainD
 int AudioEngine::getNumEqBands() const noexcept
 {
     return ParametricEqProcessor::maxBands;
+}
+
+void AudioEngine::setCompressorThresholdDb (float thresholdDb) noexcept
+{
+    if (compressorProcessor != nullptr)
+        compressorProcessor->setThresholdDb (thresholdDb);
+}
+
+void AudioEngine::setCompressorRatio (float ratio) noexcept
+{
+    if (compressorProcessor != nullptr)
+        compressorProcessor->setRatio (ratio);
+}
+
+void AudioEngine::setCompressorAttackMs (float attackMs) noexcept
+{
+    if (compressorProcessor != nullptr)
+        compressorProcessor->setAttackMs (attackMs);
+}
+
+void AudioEngine::setCompressorReleaseMs (float releaseMs) noexcept
+{
+    if (compressorProcessor != nullptr)
+        compressorProcessor->setReleaseMs (releaseMs);
+}
+
+void AudioEngine::setCompressorMakeupGainDb (float makeupGainDb) noexcept
+{
+    if (compressorProcessor != nullptr)
+        compressorProcessor->setMakeupGainDb (makeupGainDb);
 }
 
 juce::String AudioEngine::start (const juce::String& inputDeviceName,

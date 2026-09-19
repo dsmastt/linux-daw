@@ -434,6 +434,8 @@ Add EQ processor
 
 ## Milestone 11 - Compressor
 
+**Status:** Completed
+
 Add a real-time compressor.
 
 ### Parameters
@@ -1325,11 +1327,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 11 - Compressor
+## Milestone 12 - Distortion
 
-The parametric EQ works as the third chain element with per-band frequency, gain, and Q.
+The compressor works as the fourth chain element.
 
-The next task is to add a real-time compressor with threshold, ratio, attack, release, and makeup gain.
+The next task is to add guitar-oriented distortion with selectable soft clipping, hard clipping, and waveshaping algorithms, plus drive and tone controls, kept modular so more algorithms can be added.
 
 Do not skip ahead.
 

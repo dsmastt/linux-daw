@@ -9,6 +9,7 @@
 
 namespace daw
 {
+class CompressorProcessor;
 class GainProcessor;
 class NoiseGateProcessor;
 class ParametricEqProcessor;
@@ -38,6 +39,12 @@ public:
 
     void setEqBandParameters (int band, double frequencyHz, float gainDb, float q) noexcept;
     int getNumEqBands() const noexcept;
+
+    void setCompressorThresholdDb (float thresholdDb) noexcept;
+    void setCompressorRatio (float ratio) noexcept;
+    void setCompressorAttackMs (float attackMs) noexcept;
+    void setCompressorReleaseMs (float releaseMs) noexcept;
+    void setCompressorMakeupGainDb (float makeupGainDb) noexcept;
 
     int getNumProcessors() const noexcept { return processorChain.size(); }
 
@@ -84,5 +91,6 @@ private:
     GainProcessor* gainProcessor = nullptr;
     NoiseGateProcessor* gateProcessor = nullptr;
     ParametricEqProcessor* eqProcessor = nullptr;
+    CompressorProcessor* compressorProcessor = nullptr;
 };
 } // namespace daw

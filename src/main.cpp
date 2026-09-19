@@ -113,6 +113,27 @@ int runAudioEngine (const juce::ArgumentList& args)
     if (const auto value = args.getValueForOption ("--eq"); value.isNotEmpty())
         eqBandSpecs = juce::StringArray::fromTokens (value, ",", "\"");
 
+    float compThresholdDb = -10.0f;
+    float compRatio = 4.0f;
+    float compAttackMs = 5.0f;
+    float compReleaseMs = 100.0f;
+    float compMakeupDb = 0.0f;
+
+    if (const auto value = args.getValueForOption ("--comp-threshold-db"); value.isNotEmpty())
+        compThresholdDb = value.getFloatValue();
+
+    if (const auto value = args.getValueForOption ("--comp-ratio"); value.isNotEmpty())
+        compRatio = value.getFloatValue();
+
+    if (const auto value = args.getValueForOption ("--comp-attack-ms"); value.isNotEmpty())
+        compAttackMs = value.getFloatValue();
+
+    if (const auto value = args.getValueForOption ("--comp-release-ms"); value.isNotEmpty())
+        compReleaseMs = value.getFloatValue();
+
+    if (const auto value = args.getValueForOption ("--comp-makeup-db"); value.isNotEmpty())
+        compMakeupDb = value.getFloatValue();
+
     std::cout << "Input device:  " << inputDeviceName << std::endl;
     std::cout << "Output device: " << outputDeviceName << std::endl;
     std::cout << "Requested sample rate: " << static_cast<int> (sampleRate) << std::endl;
@@ -142,6 +163,16 @@ int runAudioEngine (const juce::ArgumentList& args)
     for (int band = 0; band < engine.getNumEqBands(); ++band)
         if (const auto spec = band < eqBandSpecs.size() ? eqBandSpecs[band] : juce::String(); spec.isNotEmpty())
             std::cout << "EQ band " << band + 1 << ": " << spec << std::endl;
+
+    engine.setCompressorThresholdDb (compThresholdDb);
+    engine.setCompressorRatio (compRatio);
+    engine.setCompressorAttackMs (compAttackMs);
+    engine.setCompressorReleaseMs (compReleaseMs);
+    engine.setCompressorMakeupGainDb (compMakeupDb);
+
+    std::cout << "Compressor: threshold " << compThresholdDb << " dB, ratio " << compRatio
+              << ":1, attack " << compAttackMs << " ms, release " << compReleaseMs
+              << " ms, makeup " << compMakeupDb << " dB" << std::endl;
 
     const auto error = engine.start (inputDeviceName, outputDeviceName, sampleRate, bufferSize);
 
