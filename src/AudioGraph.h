@@ -35,6 +35,9 @@ public:
 
     void setEqBandParameters (int band, double frequencyHz, float gainDb, float q) noexcept;
     int getNumEqBands() const noexcept;
+    double getEqBandFrequency (int band) const noexcept;
+    float getEqBandGain (int band) const noexcept;
+    float getEqBandQ (int band) const noexcept;
 
     void setCompressorThresholdDb (float thresholdDb) noexcept;
     void setCompressorRatio (float ratio) noexcept;

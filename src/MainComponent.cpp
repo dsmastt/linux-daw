@@ -63,6 +63,9 @@ MainComponent::MainComponent()
     addAndMakeVisible (startButton);
     addAndMakeVisible (stopButton);
 
+    processorControls = std::make_unique<ProcessorControlsComponent> (engine.getAudioGraph());
+    addAndMakeVisible (*processorControls);
+
     statusLabel.setMultiLine (true, false);
     statusLabel.setReadOnly (true);
     statusLabel.setCaretVisible (false);
@@ -74,7 +77,7 @@ MainComponent::MainComponent()
 
     startTimerHz (4);
 
-    setSize (560, 420);
+    setSize (800, 880);
 }
 
 MainComponent::~MainComponent()
@@ -113,7 +116,11 @@ void MainComponent::resized()
 
     bounds.removeFromTop (10);
 
-    statusLabel.setBounds (bounds);
+    auto statusBounds = bounds.removeFromBottom (120);
+    bounds.removeFromBottom (10);
+
+    processorControls->setBounds (bounds);
+    statusLabel.setBounds (statusBounds);
 }
 
 void MainComponent::timerCallback()

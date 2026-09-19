@@ -11,7 +11,7 @@ MainWindow::MainWindow()
     setUsingNativeTitleBar (true);
     setContentOwned (new MainComponent(), true);
     setResizable (true, true);
-    centreWithSize (560, 420);
+    centreWithSize (800, 880);
     setVisible (true);
 }
 

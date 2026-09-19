@@ -105,6 +105,21 @@ int AudioGraph::getNumEqBands() const noexcept
     return ParametricEqProcessor::maxBands;
 }
 
+double AudioGraph::getEqBandFrequency (int band) const noexcept
+{
+    return eqProcessor != nullptr ? eqProcessor->getBandFrequency (band) : 0.0;
+}
+
+float AudioGraph::getEqBandGain (int band) const noexcept
+{
+    return eqProcessor != nullptr ? eqProcessor->getBandGainDb (band) : 0.0f;
+}
+
+float AudioGraph::getEqBandQ (int band) const noexcept
+{
+    return eqProcessor != nullptr ? eqProcessor->getBandQ (band) : 0.0f;
+}
+
 void AudioGraph::setCompressorThresholdDb (float thresholdDb) noexcept
 {
     if (compressorProcessor != nullptr)

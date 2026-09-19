@@ -34,6 +34,7 @@ target_sources(linux-daw PRIVATE
     src/ParametricEqProcessor.cpp
     src/PlaybackProcessor.cpp
     src/ProcessorChain.cpp
+    src/ProcessorControlsComponent.cpp
     src/ReverbProcessor.cpp)
 
 target_compile_features(linux-daw PRIVATE cxx_std_20)

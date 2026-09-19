@@ -707,6 +707,8 @@ Add basic audio interface GUI
 
 ## Milestone 19 - Processor Controls
 
+**Status:** Completed
+
 Expose parameters for:
 
 * gain
@@ -1341,11 +1343,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 19 - Processor Controls
+## Milestone 20 - Level Meters
 
-The basic GUI works: device selection, audio start/stop, and live sample-rate, buffer-size, and status displays.
+DSP controls are exposed in the GUI for gain, gate, EQ, compressor, distortion, IR, and reverb, communicating with the audio thread through lock-free atomic parameters.
 
-The next task is to expose DSP parameters in the GUI: gain, gate, EQ, compressor, distortion, IR, and reverb, communicating safely with the audio thread.
+The next task is to add input/output level meters with peak detection and a clipping indicator, using lock-free communication from the audio thread.
 
 Do not skip ahead.
 

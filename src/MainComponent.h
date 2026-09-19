@@ -4,6 +4,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "AudioEngine.h"
+#include "ProcessorControlsComponent.h"
 
 namespace daw
 {
@@ -34,6 +35,7 @@ private:
     juce::ComboBox bufferCombo;
     juce::TextButton startButton;
     juce::TextButton stopButton;
+    std::unique_ptr<ProcessorControlsComponent> processorControls;
     juce::TextEditor statusLabel;
 
     juce::AudioDeviceManager deviceManager;
