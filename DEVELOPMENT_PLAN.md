@@ -546,6 +546,8 @@ Add reverb processor
 
 ## Milestone 15 - Separate Engine and DSP
 
+**Status:** Completed
+
 Refactor the architecture into clear layers.
 
 Target architecture:
@@ -1333,11 +1335,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 15 - Separate Engine and DSP
+## Milestone 16 - WAV Recording
 
-The reverb works as the seventh chain element with wet/dry, decay, and size controls.
+The architecture is layered: `Application` -> `AudioEngine` (device I/O only) -> `AudioGraph` (DSP chain).
 
-The next task is to refactor the architecture into clear layers: the audio engine handles device I/O and callback scheduling only, while a dedicated audio graph owns the DSP chain and all processor parameters.
+The next task is to record input audio to WAV with a producer/consumer design so the audio thread never touches the disk.
 
 Do not skip ahead.
 

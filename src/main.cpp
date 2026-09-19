@@ -170,43 +170,45 @@ int runAudioEngine (const juce::ArgumentList& args)
 
     daw::AudioEngine engine;
 
-    engine.setGainDb (gainDb);
-    engine.setGateThresholdDb (gateThresholdDb);
-    engine.setGateAttackMs (gateAttackMs);
-    engine.setGateReleaseMs (gateReleaseMs);
+    auto& graph = engine.getAudioGraph();
 
-    for (int band = 0; band < eqBandSpecs.size() && band < engine.getNumEqBands(); ++band)
+    graph.setGainDb (gainDb);
+    graph.setGateThresholdDb (gateThresholdDb);
+    graph.setGateAttackMs (gateAttackMs);
+    graph.setGateReleaseMs (gateReleaseMs);
+
+    for (int band = 0; band < eqBandSpecs.size() && band < graph.getNumEqBands(); ++band)
     {
         const auto parts = juce::StringArray::fromTokens (eqBandSpecs[band], ":", "\"");
 
         if (parts.size() >= 3)
-            engine.setEqBandParameters (band,
-                                        parts[0].getDoubleValue(),
-                                        parts[1].getFloatValue(),
-                                        parts[2].getFloatValue());
+            graph.setEqBandParameters (band,
+                                       parts[0].getDoubleValue(),
+                                       parts[1].getFloatValue(),
+                                       parts[2].getFloatValue());
     }
 
-    for (int band = 0; band < engine.getNumEqBands(); ++band)
+    for (int band = 0; band < graph.getNumEqBands(); ++band)
         if (const auto spec = band < eqBandSpecs.size() ? eqBandSpecs[band] : juce::String(); spec.isNotEmpty())
             std::cout << "EQ band " << band + 1 << ": " << spec << std::endl;
 
-    engine.setCompressorThresholdDb (compThresholdDb);
-    engine.setCompressorRatio (compRatio);
-    engine.setCompressorAttackMs (compAttackMs);
-    engine.setCompressorReleaseMs (compReleaseMs);
-    engine.setCompressorMakeupGainDb (compMakeupDb);
+    graph.setCompressorThresholdDb (compThresholdDb);
+    graph.setCompressorRatio (compRatio);
+    graph.setCompressorAttackMs (compAttackMs);
+    graph.setCompressorReleaseMs (compReleaseMs);
+    graph.setCompressorMakeupGainDb (compMakeupDb);
 
     std::cout << "Compressor: threshold " << compThresholdDb << " dB, ratio " << compRatio
               << ":1, attack " << compAttackMs << " ms, release " << compReleaseMs
               << " ms, makeup " << compMakeupDb << " dB" << std::endl;
 
-    engine.setDistortionDriveDb (distDriveDb);
-    engine.setDistortionTone (distTone);
-    engine.setDistortionMode (static_cast<daw::DistortionMode> (distMode));
+    graph.setDistortionDriveDb (distDriveDb);
+    graph.setDistortionTone (distTone);
+    graph.setDistortionMode (static_cast<daw::DistortionMode> (distMode));
 
-    engine.setReverbWetDry (reverbWetDry);
-    engine.setReverbDecay (reverbDecay);
-    engine.setReverbSize (reverbSize);
+    graph.setReverbWetDry (reverbWetDry);
+    graph.setReverbDecay (reverbDecay);
+    graph.setReverbSize (reverbSize);
 
     std::cout << "Reverb: wet/dry " << reverbWetDry << ", decay " << reverbDecay
               << ", size " << reverbSize << std::endl;
@@ -221,7 +223,7 @@ int runAudioEngine (const juce::ArgumentList& args)
 
     if (irPath.isNotEmpty())
     {
-        const auto error = engine.loadImpulseResponse (juce::File (irPath));
+        const auto error = graph.loadImpulseResponse (juce::File (irPath));
 
         if (error.isNotEmpty())
         {
@@ -229,7 +231,7 @@ int runAudioEngine (const juce::ArgumentList& args)
             return 1;
         }
 
-        std::cout << "IR: " << irPath << " (" << engine.getImpulseResponseLength() << " samples)" << std::endl;
+        std::cout << "IR: " << irPath << " (" << graph.getImpulseResponseLength() << " samples)" << std::endl;
     }
 
     const auto error = engine.start (inputDeviceName, outputDeviceName, sampleRate, bufferSize);
@@ -247,7 +249,7 @@ int runAudioEngine (const juce::ArgumentList& args)
               << ", buffer size " << engine.getBufferSize()
               << ", input channels " << engine.getNumInputChannels()
               << ", output channels " << engine.getNumOutputChannels()
-              << ", processors " << engine.getNumProcessors() << std::endl;
+              << ", processors " << graph.getNumProcessors() << std::endl;
     std::cout << "Latency: " << engine.getInputLatencySamples() << " in + "
               << engine.getOutputLatencySamples() << " out samples = " << latencyMs << " ms" << std::endl;
 

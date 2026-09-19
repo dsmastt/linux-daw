@@ -23,6 +23,7 @@ target_sources(linux-daw PRIVATE
     src/main.cpp
     src/AudioDeviceDiscovery.cpp
     src/AudioEngine.cpp
+    src/AudioGraph.cpp
     src/CompressorProcessor.cpp
     src/ConvolutionProcessor.cpp
     src/DistortionProcessor.cpp
