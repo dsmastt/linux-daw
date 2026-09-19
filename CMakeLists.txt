@@ -136,3 +136,9 @@ target_compile_definitions(linux-daw-tests PRIVATE
 target_link_libraries(linux-daw-tests
     PRIVATE juce::juce_core juce::juce_events juce::juce_audio_devices juce::juce_audio_formats juce::juce_dsp juce::juce_audio_processors fftw3f
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
+
+include(GNUInstallDirs)
+
+install(TARGETS linux-daw RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES packaging/linux-daw.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+install(FILES packaging/linux-daw.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)

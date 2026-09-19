@@ -1313,6 +1313,8 @@ Refine application architecture
 
 ## Milestone 41 - Packaging
 
+**Status:** Completed
+
 Create a reproducible Linux build.
 
 Eventually support:
@@ -1385,11 +1387,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 41 - Packaging
+## Milestone 42 - First Usable Release
 
-The architecture review is complete: duplicated helpers were consolidated, ownership and coupling verified, and all tests pass.
+Packaging works: release and debug builds, installation rules, a desktop launcher, an application icon, and a user data directory.
 
-The next task is to create a reproducible Linux build: release build, debug build, installation, desktop launcher, application icon, and user data directory.
+The next task is the first usable release: a version 0.1 build that can open an audio device, monitor audio, apply built-in DSP, record, play audio, use VST3 plugins, mix basic tracks, and save/load projects.
 
 Do not skip ahead.
 

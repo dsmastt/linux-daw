@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Linux DAW
+Comment=Low-latency guitar monitoring and DAW
+Exec=linux-daw
+Icon=linux-daw
+Terminal=false
+Categories=AudioVideo;Audio;AudioVideoEditing;

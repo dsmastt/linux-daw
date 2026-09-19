@@ -33,6 +33,9 @@ MainComponent::MainComponent()
       inputMeter ("Input"),
       outputMeter ("Output")
 {
+    juce::File::getSpecialLocation (juce::File::userApplicationDataDirectory)
+        .getChildFile ("linux-daw")
+        .createDirectory();
     titleLabel.setText ("Linux DAW", juce::dontSendNotification);
     titleLabel.setFont (juce::FontOptions{}.withHeight (22.0f).withStyle ("Bold"));
     titleLabel.setJustificationType (juce::Justification::centred);
