@@ -66,6 +66,35 @@ MainComponent::MainComponent()
     addAndMakeVisible (startButton);
     addAndMakeVisible (stopButton);
 
+    transportPlayButton.setButtonText ("Play");
+    transportPlayButton.onClick = [this] { engine.getAudioGraph().playTransport(); };
+    addAndMakeVisible (transportPlayButton);
+
+    transportPauseButton.setButtonText ("Pause");
+    transportPauseButton.onClick = [this] { engine.getAudioGraph().pauseTransport(); };
+    addAndMakeVisible (transportPauseButton);
+
+    transportStopButton.setButtonText ("Stop");
+    transportStopButton.onClick = [this] { engine.getAudioGraph().stopTransport(); };
+    addAndMakeVisible (transportStopButton);
+
+    tempoLabel.setText ("Tempo:", juce::dontSendNotification);
+    addAndMakeVisible (tempoLabel);
+
+    tempoSlider.setRange (40.0, 240.0, 1.0);
+    tempoSlider.setValue (120.0, juce::dontSendNotification);
+    tempoSlider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 48, 22);
+    tempoSlider.onValueChange = [this]
+    {
+        engine.getAudioGraph().getTransport().setTempoBpm (tempoSlider.getValue());
+    };
+    addAndMakeVisible (tempoSlider);
+
+    transportStatus.setMultiLine (false, false);
+    transportStatus.setReadOnly (true);
+    transportStatus.setCaretVisible (false);
+    addAndMakeVisible (transportStatus);
+
     processorControls = std::make_unique<ProcessorControlsComponent> (engine);
     mixer = std::make_unique<MixerComponent> (engine.getAudioGraph());
 
@@ -126,6 +155,20 @@ void MainComponent::resized()
 
     bounds.removeFromTop (10);
 
+    auto transportRow = bounds.removeFromTop (34);
+    transportPlayButton.setBounds (transportRow.removeFromLeft (70));
+    transportRow.removeFromLeft (8);
+    transportPauseButton.setBounds (transportRow.removeFromLeft (70));
+    transportRow.removeFromLeft (8);
+    transportStopButton.setBounds (transportRow.removeFromLeft (70));
+    transportRow.removeFromLeft (12);
+    tempoLabel.setBounds (transportRow.removeFromLeft (60));
+    tempoSlider.setBounds (transportRow.removeFromLeft (110));
+    transportRow.removeFromLeft (12);
+    transportStatus.setBounds (transportRow);
+
+    bounds.removeFromTop (10);
+
     auto statusBounds = bounds.removeFromBottom (120);
     bounds.removeFromBottom (10);
 
@@ -141,6 +184,26 @@ void MainComponent::resized()
 void MainComponent::timerCallback()
 {
     updateStatus();
+
+    const auto& transport = engine.getAudioGraph().getTransport();
+    const auto positionSamples = transport.getPositionSamples();
+    const auto positionSeconds = engine.isRunning() && engine.getSampleRate() > 0.0
+                                   ? static_cast<double> (positionSamples) / engine.getSampleRate()
+                                   : 0.0;
+
+    juce::String transportText;
+
+    switch (transport.getState())
+    {
+        case daw::TransportState::playing: transportText = "Playing"; break;
+        case daw::TransportState::paused:  transportText = "Paused"; break;
+        case daw::TransportState::stopped: transportText = "Stopped"; break;
+    }
+
+    transportText << "  " << positionSeconds << " s  (" << positionSamples << " samples)  "
+                  << static_cast<int> (transport.getTempoBpm()) << " BPM";
+
+    transportStatus.setText (transportText, juce::dontSendNotification);
 
     if (engine.isRunning())
     {

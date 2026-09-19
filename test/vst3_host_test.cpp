@@ -121,7 +121,15 @@ int runTest (const juce::ArgumentList& args)
 
     std::cout << "Audio running with plugin in the chain..." << std::endl;
 
+    graph.playTransport();
+
     juce::Thread::sleep (2000);
+
+    const auto transportPosition = graph.getTransport().getPositionSamples();
+
+    std::cout << "Transport position after 2 s: " << transportPosition << " samples" << std::endl;
+
+    graph.stopTransport();
 
     const auto callbacks = engine.getNumCallbacks();
     const auto xruns = engine.getXRunCount();
@@ -133,7 +141,10 @@ int runTest (const juce::ArgumentList& args)
 
     std::cout << "Plugin unloaded" << std::endl;
 
-    if (callbacks == 0 || xruns != 0)
+    const auto expectedPosition = 48000LL * 2;
+    const auto transportOk = transportPosition > expectedPosition - 2000 && transportPosition < expectedPosition + 2000;
+
+    if (callbacks == 0 || xruns != 0 || !transportOk)
     {
         std::cout << "VST3 host test FAILED" << std::endl;
         return 1;

@@ -37,6 +37,12 @@ private:
     juce::ComboBox bufferCombo;
     juce::TextButton startButton;
     juce::TextButton stopButton;
+    juce::TextButton transportPlayButton;
+    juce::TextButton transportPauseButton;
+    juce::TextButton transportStopButton;
+    juce::Label tempoLabel;
+    juce::Slider tempoSlider;
+    juce::TextEditor transportStatus;
     juce::TabbedComponent viewTabs;
     std::unique_ptr<ProcessorControlsComponent> processorControls;
     std::unique_ptr<MixerComponent> mixer;

@@ -7,6 +7,7 @@
 
 #include "DistortionShaper.h"
 #include "Track.h"
+#include "Transport.h"
 
 namespace juce
 {
@@ -83,6 +84,13 @@ public:
     double getPlaybackLengthSeconds() const noexcept;
     void setPlaybackPositionSeconds (double seconds) noexcept;
 
+    // Transport.
+    Transport& getTransport() noexcept { return transport; }
+    const Transport& getTransport() const noexcept { return transport; }
+    void playTransport() noexcept;
+    void pauseTransport() noexcept;
+    void stopTransport() noexcept;
+
     int getNumProcessors() const noexcept;
 
     void prepare (double sampleRate, int bufferSize) noexcept;
@@ -96,5 +104,6 @@ public:
 private:
     std::vector<std::unique_ptr<Track>> tracks;
     std::unique_ptr<PlaybackProcessor> playbackProcessor;
+    Transport transport;
 };
 } // namespace daw

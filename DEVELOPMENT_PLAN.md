@@ -894,6 +894,8 @@ Add mixer
 
 ## Milestone 25 - Transport
 
+**Status:** Completed
+
 Add:
 
 * play
@@ -1353,11 +1355,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 25 - Transport
+## Milestone 26 - Timeline
 
-The mixer UI works: a channel strip per track with name, plugin status, volume, pan, and mute/solo controls, driving the track model in real time.
+The transport works: play, pause, stop, sample position, and tempo, with playback driven from the audio thread.
 
-The next task is to add a transport system: play, pause, stop, position, tempo, and sample position.
+The next task is to create a basic arrangement timeline with clips that can be positioned, moved, resized, and played back.
 
 Do not skip ahead.
 

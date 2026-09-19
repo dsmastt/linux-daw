@@ -78,6 +78,25 @@ double AudioGraph::getPlaybackPositionSeconds() const noexcept { return playback
 double AudioGraph::getPlaybackLengthSeconds() const noexcept { return playbackProcessor->getLengthSeconds(); }
 void AudioGraph::setPlaybackPositionSeconds (double seconds) noexcept { playbackProcessor->setPositionSeconds (seconds); }
 
+void AudioGraph::playTransport() noexcept
+{
+    playbackProcessor->setPositionFrames (transport.getPositionSamples());
+    transport.play();
+    playbackProcessor->play();
+}
+
+void AudioGraph::pauseTransport() noexcept
+{
+    transport.pause();
+    playbackProcessor->pause();
+}
+
+void AudioGraph::stopTransport() noexcept
+{
+    transport.stop();
+    playbackProcessor->stop();
+}
+
 int AudioGraph::getNumProcessors() const noexcept
 {
     return getTrack (0).getNumProcessors();
@@ -104,6 +123,9 @@ void AudioGraph::processWithInput (const float* const* inputChannels,
                                    int numChannels,
                                    int numSamples) noexcept
 {
+    if (transport.isPlaying())
+        transport.advance (numSamples);
+
     for (int channel = 0; channel < numChannels; ++channel)
         if (outputChannels[channel] != nullptr)
             juce::FloatVectorOperations::clear (outputChannels[channel], numSamples);
