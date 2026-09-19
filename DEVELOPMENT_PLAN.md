@@ -948,6 +948,8 @@ Add timeline
 
 ## Milestone 27 - MIDI Input
 
+**Status:** Completed
+
 Add:
 
 * MIDI device discovery
@@ -965,6 +967,8 @@ Add MIDI input
 ---
 
 ## Milestone 28 - MIDI Tracks
+
+**Status:** Completed
 
 Allow MIDI data to exist on tracks.
 
@@ -1357,11 +1361,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 27 - MIDI Input
+## Milestone 29 - Parameter Automation
 
-The timeline works: clips can be added, moved, resized, and played back, verified numerically end-to-end.
+MIDI data exists on tracks: timestamped events are emitted to plugins during playback, verified end-to-end.
 
-The next task is to add MIDI: device discovery, MIDI input with note events, velocity, and controller events.
+The next task is to support automation of parameters: volume, pan, DSP parameters, and plugin parameters, driven by the transport.
 
 Do not skip ahead.
 

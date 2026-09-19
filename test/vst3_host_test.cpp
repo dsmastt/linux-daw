@@ -90,7 +90,7 @@ bool sendMidiViaAlsa (const char* deviceName)
         {
             ev.type = SND_SEQ_EVENT_CONTROLLER;
             ev.data.control.channel = 0;
-            ev.data.control.param = param1;
+            ev.data.control.param = static_cast<unsigned int> (param1);
             ev.data.control.value = param2;
         }
         else
@@ -229,6 +229,14 @@ int runTest (const juce::ArgumentList& args)
     std::cout << "Bypassed: " << (graph.isVst3PluginBypassed() ? "yes" : "no") << std::endl;
     graph.setVst3PluginBypassed (false);
 
+    const auto noteOnMessage = juce::MidiMessage::noteOn (1, 60, static_cast<juce::uint8> (100));
+    graph.getTrack (0).addMidiEvent (4800, noteOnMessage.getRawData(), noteOnMessage.getRawDataSize());
+
+    const auto noteOffMessage = juce::MidiMessage::noteOff (1, 60, static_cast<juce::uint8> (0));
+    graph.getTrack (0).addMidiEvent (24000, noteOffMessage.getRawData(), noteOffMessage.getRawDataSize());
+
+    std::cout << "MIDI events added to track 0" << std::endl;
+
     const auto clipFile = createClipTestFile();
     const auto clipLoadError = graph.loadPlaybackFile (clipFile);
 
@@ -292,6 +300,20 @@ int runTest (const juce::ArgumentList& args)
 
     const auto expectedPosition = 48000LL * 2;
     const auto transportOk = transportPosition > expectedPosition - 2000 && transportPosition < expectedPosition + 2000;
+
+    float midiTrackParamValue = 0.0f;
+
+    if (auto* instance = graph.getVst3PluginInstance())
+    {
+        const auto& parameters = instance->getParameters();
+
+        if (!parameters.isEmpty())
+            midiTrackParamValue = parameters.getUnchecked (0)->getValue();
+    }
+
+    std::cout << "Plugin gain parameter after MIDI playback: " << midiTrackParamValue << std::endl;
+
+    const auto midiTrackOk = std::abs (midiTrackParamValue - 100.0f / 127.0f) < 0.01f;
 
     // Timeline clip playback test: add a clip, and verify audio reaches the
     // output while the transport plays.
@@ -374,7 +396,7 @@ int runTest (const juce::ArgumentList& args)
 
     engine.closeMidiDevice();
 
-    if (callbacks == 0 || xruns != 0 || !transportOk || !clipsOk || !midiOk)
+    if (callbacks == 0 || xruns != 0 || !transportOk || !clipsOk || !midiOk || !midiTrackOk)
     {
         std::cout << "VST3 host test FAILED" << std::endl;
         return 1;

@@ -48,7 +48,13 @@ bool TestPluginProcessor::isBusesLayoutSupported (const BusesLayout& layouts) co
 
 void TestPluginProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
-    juce::ignoreUnused (midiMessages);
+    for (const auto metadata : midiMessages)
+    {
+        const auto message = metadata.getMessage();
+
+        if (message.isNoteOn() && gainParameter != nullptr)
+            gainParameter->setValueNotifyingHost (static_cast<float> (message.getVelocity()) / 127.0f);
+    }
 
     const float currentGain = gainParameter != nullptr ? gainParameter->get() : 1.0f;
 

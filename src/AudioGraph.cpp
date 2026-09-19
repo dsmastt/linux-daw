@@ -121,6 +121,8 @@ void AudioGraph::processWithInput (const float* const* inputChannels,
                                    int numSamples,
                                    juce::MidiBuffer& midiEvents) noexcept
 {
+    const auto transportPosition = transport.getPositionSamples();
+
     if (transport.isPlaying())
         transport.advance (numSamples);
 
@@ -133,17 +135,20 @@ void AudioGraph::processWithInput (const float* const* inputChannels,
     for (const auto& track : tracks)
         anyTrackSoloed = anyTrackSoloed || track->isSoloed();
 
+    const bool transportPlaying = transport.isPlaying();
+
     for (int i = 0; i < numTracks; ++i)
         tracks[static_cast<size_t> (i)]->process (i == 0 ? inputChannels : nullptr,
                                                   outputChannels,
                                                   numChannels,
                                                   numSamples,
                                                   anyTrackSoloed,
-                                                  transport.getPositionSamples(),
+                                                  transportPosition,
                                                   ClipSource { playbackProcessor->getPreparedData(),
                                                                playbackProcessor->getPreparedFrames(),
                                                                playbackProcessor->getPreparedChannels() },
-                                                  midiEvents);
+                                                  midiEvents,
+                                                  transportPlaying);
 
     playbackProcessor->process (outputChannels, numChannels, numSamples);
 }

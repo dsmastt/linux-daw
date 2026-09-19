@@ -342,6 +342,33 @@ void Track::resizeClip (int clipIndex, std::int64_t newLengthSamples) noexcept
     clips[static_cast<size_t> (clipIndex)].lengthSamples.store (std::max<std::int64_t> (1, newLengthSamples), std::memory_order_relaxed);
 }
 
+int Track::addMidiEvent (std::int64_t timeSamples, const std::uint8_t* data, int numBytes)
+{
+    const int index = midiEventCount.load (std::memory_order_relaxed);
+
+    if (index >= maxMidiEventsPerTrack)
+        return -1;
+
+    auto& event = midiEvents[static_cast<size_t> (index)];
+    event.timeSamples.store (timeSamples, std::memory_order_relaxed);
+
+    const int bytesToStore = std::min (numBytes, 4);
+
+    for (int i = 0; i < bytesToStore; ++i)
+        event.bytes[static_cast<size_t> (i)] = data[i];
+
+    event.numBytes = bytesToStore;
+
+    midiEventCount.store (index + 1, std::memory_order_release);
+
+    return index;
+}
+
+void Track::clearMidiEvents() noexcept
+{
+    midiEventCount.store (0, std::memory_order_release);
+}
+
 void Track::prepare (double sampleRate, int bufferSize) noexcept
 {
     numChannels = maxChannels;
@@ -363,7 +390,8 @@ void Track::process (const float* const* input,
                      bool anyTrackSoloed,
                      std::int64_t transportPositionSamples,
                      const ClipSource& clipSource,
-                     juce::MidiBuffer& midiEvents) noexcept
+                     juce::MidiBuffer& midiEventsOut,
+                     bool transportPlaying) noexcept
 {
     if (isMuted() || (anyTrackSoloed && !isSoloed()))
         return;
@@ -385,7 +413,25 @@ void Track::process (const float* const* input,
     scratchPointers[0] = scratch[0].data();
     scratchPointers[1] = scratch[1].data();
 
-    chain.processWithMidi (scratchPointers, channels, frames, midiEvents);
+    if (transportPlaying)
+    {
+        const int numMidiEvents = midiEventCount.load (std::memory_order_acquire);
+
+        for (int eventIndex = 0; eventIndex < numMidiEvents; ++eventIndex)
+        {
+            const auto& event = midiEvents[static_cast<size_t> (eventIndex)];
+            const auto eventTime = event.timeSamples.load (std::memory_order_relaxed);
+
+            if (eventTime < transportPositionSamples || eventTime >= transportPositionSamples + frames)
+                continue;
+
+            midiEventsOut.addEvent (event.bytes,
+                                    event.numBytes,
+                                    static_cast<int> (eventTime - transportPositionSamples));
+        }
+    }
+
+    chain.processWithMidi (scratchPointers, channels, frames, midiEventsOut);
 
     const int numClips = clipCount.load (std::memory_order_acquire);
 

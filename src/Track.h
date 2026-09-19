@@ -8,6 +8,7 @@
 
 #include "Clip.h"
 #include "DistortionShaper.h"
+#include "MidiClip.h"
 #include "ProcessorChain.h"
 
 namespace juce
@@ -94,6 +95,11 @@ public:
     int getNumClips() const noexcept { return clipCount.load(); }
     const Clip& getClip (int clipIndex) const noexcept { return clips[static_cast<size_t> (clipIndex)]; }
 
+    int addMidiEvent (std::int64_t timeSamples, const std::uint8_t* data, int numBytes);
+    void clearMidiEvents() noexcept;
+    int getNumMidiEvents() const noexcept { return midiEventCount.load(); }
+    const MidiEventRecord& getMidiEvent (int eventIndex) const noexcept { return midiEvents[static_cast<size_t> (eventIndex)]; }
+
     void prepare (double sampleRate, int bufferSize) noexcept;
     void reset() noexcept;
 
@@ -104,7 +110,8 @@ public:
                   bool anyTrackSoloed,
                   std::int64_t transportPositionSamples,
                   const ClipSource& clipSource,
-                  juce::MidiBuffer& midiEvents) noexcept;
+                  juce::MidiBuffer& midiEvents,
+                  bool transportPlaying) noexcept;
 
 private:
     static constexpr int maxChannels = 2;
@@ -131,5 +138,8 @@ private:
 
     Clip clips[maxClipsPerTrack];
     std::atomic<int> clipCount { 0 };
+
+    MidiEventRecord midiEvents[maxMidiEventsPerTrack];
+    std::atomic<int> midiEventCount { 0 };
 };
 } // namespace daw
