@@ -32,6 +32,7 @@ set(CORE_SOURCES
     src/ReverbProcessor.cpp
     src/Track.cpp
     src/Transport.cpp
+    src/UndoManager.cpp
     src/Vst3HostProcessor.cpp)
 
 juce_add_gui_app(linux-daw

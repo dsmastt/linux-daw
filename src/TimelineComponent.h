@@ -3,6 +3,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "AudioEngine.h"
+#include "UndoManager.h"
 
 namespace daw
 {
@@ -10,7 +11,7 @@ class TimelineComponent final : public juce::Component,
                                 public juce::Timer
 {
 public:
-    explicit TimelineComponent (AudioEngine& engineToUse);
+    explicit TimelineComponent (AudioEngine& engineToUse, UndoManager& undoToUse);
     ~TimelineComponent() override;
 
     void paint (juce::Graphics& g) override;
@@ -37,6 +38,7 @@ private:
 
     AudioEngine& engine;
     AudioGraph& graph;
+    UndoManager& undo;
 
     juce::TextButton loadFileButton;
     juce::ComboBox trackCombo;

@@ -10,6 +10,7 @@
 #include "MixerComponent.h"
 #include "ProcessorControlsComponent.h"
 #include "TimelineComponent.h"
+#include "UndoManager.h"
 
 namespace daw
 {
@@ -24,6 +25,9 @@ public:
     void timerCallback() override;
 
     AudioEngine& getEngine() noexcept { return engine; }
+    UndoManager& getUndoManager() noexcept { return undoManager; }
+
+    void refreshAfterUndoRedo();
 
 private:
     void refreshDevices();
@@ -66,5 +70,6 @@ private:
     juce::AudioDeviceManager deviceManager;
     juce::OwnedArray<juce::AudioIODeviceType> deviceTypes;
     AudioEngine engine;
+    UndoManager undoManager;
 };
 } // namespace daw

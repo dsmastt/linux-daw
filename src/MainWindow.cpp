@@ -34,24 +34,43 @@ void MainWindow::closeButtonPressed()
 
 juce::StringArray MainWindow::getMenuBarNames()
 {
-    return { "File" };
+    return { "File", "Edit" };
 }
 
-juce::PopupMenu MainWindow::getMenuForIndex (int, const juce::String&)
+juce::PopupMenu MainWindow::getMenuForIndex (int menuIndex, const juce::String&)
 {
-    juce::PopupMenu menu;
+    if (menuIndex == 0)
+    {
+        juce::PopupMenu menu;
 
-    menu.addItem (menuNewProject, "New Project");
-    menu.addItem (menuOpenProject, "Open Project...");
-    menu.addSeparator();
-    menu.addItem (menuSaveProject, "Save Project");
-    menu.addItem (menuSaveProjectAs, "Save Project As...");
+        menu.addItem (menuNewProject, "New Project");
+        menu.addItem (menuOpenProject, "Open Project...");
+        menu.addSeparator();
+        menu.addItem (menuSaveProject, "Save Project");
+        menu.addItem (menuSaveProjectAs, "Save Project As...");
+
+        return menu;
+    }
+
+    juce::PopupMenu menu;
+    menu.addItem (1, "Undo");
+    menu.addItem (2, "Redo");
 
     return menu;
 }
 
-void MainWindow::menuItemSelected (int menuItemId, int)
+void MainWindow::menuItemSelected (int menuItemId, int topLevelMenuIndex)
 {
+    if (topLevelMenuIndex == 1)
+    {
+        if (menuItemId == 1)
+            undo();
+        else if (menuItemId == 2)
+            redo();
+
+        return;
+    }
+
     switch (menuItemId)
     {
         case menuNewProject:    newProject(); break;
@@ -64,6 +83,19 @@ void MainWindow::menuItemSelected (int menuItemId, int)
 
 bool MainWindow::keyPressed (const juce::KeyPress& key)
 {
+    if (key == juce::KeyPress ('z', juce::ModifierKeys::ctrlModifier, 0))
+    {
+        undo();
+        return true;
+    }
+
+    if (key == juce::KeyPress ('z', juce::ModifierKeys::ctrlModifier | juce::ModifierKeys::shiftModifier, 0)
+        || key == juce::KeyPress ('y', juce::ModifierKeys::ctrlModifier, 0))
+    {
+        redo();
+        return true;
+    }
+
     if (key == juce::KeyPress ('n', juce::ModifierKeys::ctrlModifier, 0))
     {
         newProject();
@@ -89,6 +121,34 @@ bool MainWindow::keyPressed (const juce::KeyPress& key)
     }
 
     return false;
+}
+
+void MainWindow::undo()
+{
+    auto& undoManager = content.getUndoManager();
+    const auto error = undoManager.undo (content.getEngine().getAudioGraph());
+
+    if (error.isNotEmpty())
+    {
+        showError ("Undo", error);
+        return;
+    }
+
+    content.refreshAfterUndoRedo();
+}
+
+void MainWindow::redo()
+{
+    auto& undoManager = content.getUndoManager();
+    const auto error = undoManager.redo (content.getEngine().getAudioGraph());
+
+    if (error.isNotEmpty())
+    {
+        showError ("Redo", error);
+        return;
+    }
+
+    content.refreshAfterUndoRedo();
 }
 
 void MainWindow::newProject()

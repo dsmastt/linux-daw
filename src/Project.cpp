@@ -58,6 +58,16 @@ bool readBool (const juce::var& object, const char* property, bool defaultValue)
 }
 } // namespace
 
+juce::var Project::captureState (const AudioGraph& graph)
+{
+    return graphToVar (juce::File(), graph);
+}
+
+juce::String Project::restoreState (const juce::var& state, AudioGraph& graph, const juce::File& projectFile)
+{
+    return applyVar (projectFile, state, graph);
+}
+
 juce::String Project::save (const juce::File& file, AudioGraph& graph)
 {
     const auto root = graphToVar (file, graph);
@@ -244,6 +254,8 @@ juce::String Project::applyVar (const juce::File& projectFile, const juce::var& 
 
     if (root["format"].toString() != "linux-daw-project")
         return "Not a linux-daw project file";
+
+    graph.resetToDefaults();
 
     graph.getTransport().setTempoBpm (root["tempoBpm"].isVoid() ? 120.0 : static_cast<double> (root["tempoBpm"]));
 

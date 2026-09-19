@@ -14,6 +14,7 @@
 #include "AudioEngine.h"
 #include "AudioGraph.h"
 #include "Project.h"
+#include "UndoManager.h"
 #include "Vst3HostProcessor.h"
 
 namespace
@@ -453,6 +454,37 @@ int runTest (const juce::ArgumentList& args)
 
     std::cout << "Project round-trip " << (roundTripOk ? "passed" : "FAILED") << std::endl;
 
+    // Undo/redo test.
+    daw::UndoManager undoManager;
+
+    const auto clipsBeforeUndo = graph.getTrack (0).getNumClips();
+
+    undoManager.captureUndoState (graph);
+    graph.getTrack (0).setGainDb (3.0f);
+
+    undoManager.captureUndoState (graph);
+    graph.getTrack (0).addClip (5000, 1000, 0);
+
+    const auto undoError1 = undoManager.undo (graph);
+    const auto undoOk1 = undoError1.isEmpty()
+                         && std::abs (graph.getTrack (0).getGainDb() - 3.0f) < 0.01f
+                         && graph.getTrack (0).getNumClips() == clipsBeforeUndo;
+
+    std::cout << "undo1: error='" << undoError1 << "' gain=" << graph.getTrack (0).getGainDb()
+              << " clips=" << graph.getTrack (0).getNumClips() << std::endl;
+
+    const auto undoError2 = undoManager.undo (graph);
+    const auto undoOk2 = undoError2.isEmpty()
+                         && std::abs (graph.getTrack (0).getGainDb() - 0.0f) < 0.01f
+                         && graph.getTrack (0).getNumClips() == clipsBeforeUndo;
+
+    const auto redoError = undoManager.redo (graph);
+    const auto redoOk = redoError.isEmpty()
+                        && std::abs (graph.getTrack (0).getGainDb() - 3.0f) < 0.01f
+                        && graph.getTrack (0).getNumClips() == clipsBeforeUndo;
+
+    std::cout << "Undo/redo " << (undoOk1 && undoOk2 && redoOk ? "passed" : "FAILED") << std::endl;
+
     // MIDI round-trip test via virtual devices.
     const auto midiOpenError = engine.openVirtualMidiDevice ("linux-daw-test-midi");
 
@@ -497,7 +529,7 @@ int runTest (const juce::ArgumentList& args)
     engine.closeMidiDevice();
 
     if (callbacks == 0 || xruns != 0 || !transportOk || !clipsOk || !midiOk || !midiTrackOk
-        || !volumeAutomationOk || !pluginAutomationOk || !roundTripOk)
+        || !volumeAutomationOk || !pluginAutomationOk || !roundTripOk || !undoOk1 || !undoOk2 || !redoOk)
     {
         std::cout << "VST3 host test FAILED" << std::endl;
         return 1;

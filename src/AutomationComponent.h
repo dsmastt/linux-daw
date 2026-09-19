@@ -3,6 +3,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "AudioEngine.h"
+#include "UndoManager.h"
 
 namespace daw
 {
@@ -10,7 +11,7 @@ class AutomationComponent final : public juce::Component,
                                   public juce::Timer
 {
 public:
-    explicit AutomationComponent (AudioEngine& engineToUse);
+    explicit AutomationComponent (AudioEngine& engineToUse, UndoManager& undoToUse);
     ~AutomationComponent() override;
 
     void paint (juce::Graphics& g) override;
@@ -45,6 +46,7 @@ private:
 
     AudioEngine& engine;
     AudioGraph& graph;
+    UndoManager& undo;
 
     juce::ComboBox trackCombo;
     juce::ComboBox parameterCombo;

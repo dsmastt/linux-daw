@@ -4,6 +4,7 @@
 
 #include "AudioEngine.h"
 #include "AudioGraph.h"
+#include "UndoManager.h"
 #include "Vst3HostProcessor.h"
 
 namespace daw
@@ -27,22 +28,33 @@ public:
         juce::Label label;
     };
 
-    explicit ProcessorControlsComponent (AudioEngine& engine);
+    explicit ProcessorControlsComponent (AudioEngine& engine, UndoManager& undoManagerToUse);
     ~ProcessorControlsComponent() override;
 
     void resized() override;
+    void refreshFromGraph();
 
 private:
     static void layoutRows (juce::Component& parent, const std::vector<std::unique_ptr<SliderRow>>& rows);
+
+    template <typename Tab>
+    void wireUndoTab (Tab& tab)
+    {
+        for (auto& row : tab.rows)
+            row->slider.onDragStart = [this] { undo.captureUndoState (graph); };
+    }
 
     class GainTab final : public juce::Component
     {
     public:
         explicit GainTab (AudioGraph& graph);
         void resized() override;
+        void refreshFromGraph();
+
+        std::vector<std::unique_ptr<SliderRow>> rows;
 
     private:
-        std::vector<std::unique_ptr<SliderRow>> rows;
+        AudioGraph& graph;
     };
 
     class GateTab final : public juce::Component
@@ -50,9 +62,12 @@ private:
     public:
         explicit GateTab (AudioGraph& graph);
         void resized() override;
+        void refreshFromGraph();
+
+        std::vector<std::unique_ptr<SliderRow>> rows;
 
     private:
-        std::vector<std::unique_ptr<SliderRow>> rows;
+        AudioGraph& graph;
     };
 
     class EqTab final : public juce::Component
@@ -60,9 +75,12 @@ private:
     public:
         explicit EqTab (AudioGraph& graph);
         void resized() override;
+        void refreshFromGraph();
+
+        std::vector<std::unique_ptr<SliderRow>> rows;
 
     private:
-        std::vector<std::unique_ptr<SliderRow>> rows;
+        AudioGraph& graph;
     };
 
     class CompressorTab final : public juce::Component
@@ -70,9 +88,12 @@ private:
     public:
         explicit CompressorTab (AudioGraph& graph);
         void resized() override;
+        void refreshFromGraph();
+
+        std::vector<std::unique_ptr<SliderRow>> rows;
 
     private:
-        std::vector<std::unique_ptr<SliderRow>> rows;
+        AudioGraph& graph;
     };
 
     class DistortionTab final : public juce::Component
@@ -80,9 +101,12 @@ private:
     public:
         explicit DistortionTab (AudioGraph& graph);
         void resized() override;
+        void refreshFromGraph();
+
+        std::vector<std::unique_ptr<SliderRow>> rows;
 
     private:
-        std::vector<std::unique_ptr<SliderRow>> rows;
+        AudioGraph& graph;
         juce::Label modeLabel;
         juce::ComboBox modeCombo;
     };
@@ -90,11 +114,12 @@ private:
     class CabinetTab final : public juce::Component
     {
     public:
-        explicit CabinetTab (AudioGraph& graph);
+        explicit CabinetTab (AudioGraph& graph, UndoManager& undoToUse);
         void resized() override;
 
     private:
         AudioGraph& graph;
+        UndoManager& undo;
         juce::TextButton loadButton;
         juce::TextButton clearButton;
         juce::TextEditor statusText;
@@ -105,17 +130,21 @@ private:
     public:
         explicit ReverbTab (AudioGraph& graph);
         void resized() override;
+        void refreshFromGraph();
+
+        std::vector<std::unique_ptr<SliderRow>> rows;
 
     private:
-        std::vector<std::unique_ptr<SliderRow>> rows;
+        AudioGraph& graph;
     };
 
     class PluginTab final : public juce::Component
     {
     public:
-        explicit PluginTab (AudioEngine& engine);
+        explicit PluginTab (AudioEngine& engine, UndoManager& undoToUse);
         ~PluginTab() override;
         void resized() override;
+        void refreshFromGraph();
 
     private:
         class EditorWindow;
@@ -128,6 +157,7 @@ private:
 
         AudioEngine& engine;
         AudioGraph& graph;
+        UndoManager& undo;
         juce::TextButton rescanButton;
         juce::ComboBox pluginCombo;
         juce::TextButton loadButton;
@@ -151,5 +181,9 @@ private:
     CabinetTab cabinetTab;
     ReverbTab reverbTab;
     PluginTab pluginTab;
+
+    AudioEngine& engine;
+    AudioGraph& graph;
+    UndoManager& undo;
 };
 } // namespace daw

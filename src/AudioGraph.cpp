@@ -44,6 +44,15 @@ void AudioGraph::setDistortionDriveDb (float driveDb) noexcept { getTrack (0).se
 void AudioGraph::setDistortionTone (float tone) noexcept { getTrack (0).setDistortionTone (tone); }
 void AudioGraph::setDistortionMode (DistortionMode mode) noexcept { getTrack (0).setDistortionMode (mode); }
 
+float AudioGraph::getCompressorThresholdDb() const noexcept { return getTrack (0).getCompressorThresholdDb(); }
+float AudioGraph::getCompressorRatio() const noexcept { return getTrack (0).getCompressorRatio(); }
+float AudioGraph::getCompressorAttackMs() const noexcept { return getTrack (0).getCompressorAttackMs(); }
+float AudioGraph::getCompressorReleaseMs() const noexcept { return getTrack (0).getCompressorReleaseMs(); }
+float AudioGraph::getCompressorMakeupGainDb() const noexcept { return getTrack (0).getCompressorMakeupGainDb(); }
+float AudioGraph::getDistortionDriveDb() const noexcept { return getTrack (0).getDistortionDriveDb(); }
+float AudioGraph::getDistortionTone() const noexcept { return getTrack (0).getDistortionTone(); }
+DistortionMode AudioGraph::getDistortionMode() const noexcept { return getTrack (0).getDistortionMode(); }
+
 juce::String AudioGraph::loadImpulseResponse (const juce::File& file) { return getTrack (0).loadImpulseResponse (file); }
 void AudioGraph::clearImpulseResponse() noexcept { getTrack (0).clearImpulseResponse(); }
 bool AudioGraph::hasImpulseResponse() const noexcept { return getTrack (0).hasImpulseResponse(); }
@@ -52,6 +61,10 @@ int AudioGraph::getImpulseResponseLength() const noexcept { return getTrack (0).
 void AudioGraph::setReverbWetDry (float wetDry) noexcept { getTrack (0).setReverbWetDry (wetDry); }
 void AudioGraph::setReverbDecay (float decay) noexcept { getTrack (0).setReverbDecay (decay); }
 void AudioGraph::setReverbSize (float size) noexcept { getTrack (0).setReverbSize (size); }
+
+float AudioGraph::getReverbWetDry() const noexcept { return getTrack (0).getReverbWetDry(); }
+float AudioGraph::getReverbDecay() const noexcept { return getTrack (0).getReverbDecay(); }
+float AudioGraph::getReverbSize() const noexcept { return getTrack (0).getReverbSize(); }
 
 juce::String AudioGraph::loadVst3Plugin (const juce::PluginDescription& description, double sampleRate, int bufferSize)
 {

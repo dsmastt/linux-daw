@@ -3,8 +3,10 @@
 namespace daw
 {
 //==============================================================================
-ChannelStripComponent::ChannelStripComponent (Track& trackToUse, const juce::String& nameToUse)
+ChannelStripComponent::ChannelStripComponent (Track& trackToUse, const juce::String& nameToUse, AudioGraph& graphToUse, UndoManager& undoToUse)
     : track (trackToUse),
+      graph (graphToUse),
+      undo (undoToUse),
       name (nameToUse)
 {
     nameLabel.setText (name, juce::dontSendNotification);
@@ -29,6 +31,11 @@ ChannelStripComponent::ChannelStripComponent (Track& trackToUse, const juce::Str
     volumeSlider.setRange (-60.0, 12.0, 0.5);
     volumeSlider.setValue (track.getVolumeDb(), juce::dontSendNotification);
     volumeSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 64, 20);
+    volumeSlider.onDragStart = [this]
+    {
+        undo.captureUndoState (graph);
+    };
+
     volumeSlider.onValueChange = [this]
     {
         track.setVolumeDb (static_cast<float> (volumeSlider.getValue()));
@@ -43,6 +50,11 @@ ChannelStripComponent::ChannelStripComponent (Track& trackToUse, const juce::Str
     panSlider.setRange (-1.0, 1.0, 0.01);
     panSlider.setValue (track.getPan(), juce::dontSendNotification);
     panSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 56, 20);
+    panSlider.onDragStart = [this]
+    {
+        undo.captureUndoState (graph);
+    };
+
     panSlider.onValueChange = [this]
     {
         track.setPan (static_cast<float> (panSlider.getValue()));
@@ -89,6 +101,12 @@ void ChannelStripComponent::resized()
     soloButton.setBounds (buttons.reduced (2, 0));
 }
 
+void ChannelStripComponent::mouseDown (const juce::MouseEvent& event)
+{
+    if (event.eventComponent == &muteButton || event.eventComponent == &soloButton)
+        undo.captureUndoState (graph);
+}
+
 void ChannelStripComponent::refreshPluginStatus()
 {
     const auto pluginName = track.getVst3PluginName();
@@ -108,12 +126,13 @@ void ChannelStripComponent::refreshPluginStatus()
 }
 
 //==============================================================================
-MixerComponent::MixerComponent (AudioGraph& graphToUse)
-    : graph (graphToUse)
+MixerComponent::MixerComponent (AudioGraph& graphToUse, UndoManager& undoToUse)
+    : graph (graphToUse),
+      undo (undoToUse)
 {
     for (int i = 0; i < AudioGraph::numTracks; ++i)
     {
-        auto strip = std::make_unique<ChannelStripComponent> (graph.getTrack (i), "Track " + juce::String (i + 1));
+        auto strip = std::make_unique<ChannelStripComponent> (graph.getTrack (i), "Track " + juce::String (i + 1), graph, undo);
         addAndMakeVisible (*strip);
         channelStrips.push_back (std::move (strip));
     }
@@ -140,5 +159,10 @@ void MixerComponent::timerCallback()
 {
     for (auto& strip : channelStrips)
         strip->refreshPluginStatus();
+}
+
+void MixerComponent::refreshFromGraph()
+{
+    repaint();
 }
 } // namespace daw

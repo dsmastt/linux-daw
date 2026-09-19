@@ -12,6 +12,9 @@ public:
     static juce::String save (const juce::File& file, AudioGraph& graph);
     static juce::String load (const juce::File& file, AudioGraph& graph);
 
+    static juce::var captureState (const AudioGraph& graph);
+    static juce::String restoreState (const juce::var& state, AudioGraph& graph, const juce::File& projectFile);
+
 private:
     static juce::var graphToVar (const juce::File& projectFile, const AudioGraph& graph);
     static juce::String applyVar (const juce::File& projectFile, const juce::var& root, AudioGraph& graph);

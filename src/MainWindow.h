@@ -34,6 +34,8 @@ private:
     void openProject();
     void saveProject();
     void saveProjectAs();
+    void undo();
+    void redo();
 
     void showError (const juce::String& title, const juce::String& message);
 

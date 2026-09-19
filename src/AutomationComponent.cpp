@@ -5,9 +5,10 @@
 
 namespace daw
 {
-AutomationComponent::AutomationComponent (AudioEngine& engineToUse)
+AutomationComponent::AutomationComponent (AudioEngine& engineToUse, UndoManager& undoToUse)
     : engine (engineToUse),
-      graph (engineToUse.getAudioGraph())
+      graph (engineToUse.getAudioGraph()),
+      undo (undoToUse)
 {
     for (int i = 0; i < AudioGraph::numTracks; ++i)
         trackCombo.addItem ("Track " + juce::String (i + 1), i + 1);
@@ -33,7 +34,11 @@ AutomationComponent::AutomationComponent (AudioEngine& engineToUse)
     addAndMakeVisible (parameterCombo);
 
     clearButton.setButtonText ("Clear Curve");
-    clearButton.onClick = [this] { clearCurrentCurve(); };
+    clearButton.onClick = [this]
+    {
+        undo.captureUndoState (graph);
+        clearCurrentCurve();
+    };
     addAndMakeVisible (clearButton);
 
     statusText.setMultiLine (false, false);
@@ -257,6 +262,8 @@ int AutomationComponent::findPointAt (int x, int y) const noexcept
 
 void AutomationComponent::mouseDown (const juce::MouseEvent& event)
 {
+    undo.captureUndoState (graph);
+
     selectedPoint = findPointAt (event.getPosition().getX(), event.getPosition().getY());
 
     if (selectedPoint < 0)

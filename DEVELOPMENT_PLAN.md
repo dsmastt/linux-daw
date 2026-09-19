@@ -1065,6 +1065,8 @@ Add project save and load
 
 ## Milestone 32 - Undo System
 
+**Status:** Completed
+
 Add undo/redo for project-state operations.
 
 Potential operations:
@@ -1367,11 +1369,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 32 - Undo System
+## Milestone 33 - Audio Performance Profiling
 
-Project persistence works: new project, save, save as, and load through the menu bar with keyboard shortcuts, with error reporting that keeps the current session alive.
+Undo/redo works for project-state operations through snapshot-based state restoration, wired into all mutating GUI actions with Ctrl+Z/Ctrl+Shift+Z shortcuts.
 
-The next task is to add undo/redo for project-state operations such as moving clips, changing parameters, and adding or removing plugins.
+The next task is to measure audio performance: callback execution time, CPU usage, DSP cost, plugin cost, memory usage, underruns, and latency.
 
 Do not skip ahead.
 

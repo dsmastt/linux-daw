@@ -4,9 +4,10 @@
 
 namespace daw
 {
-TimelineComponent::TimelineComponent (AudioEngine& engineToUse)
+TimelineComponent::TimelineComponent (AudioEngine& engineToUse, UndoManager& undoToUse)
     : engine (engineToUse),
-      graph (engineToUse.getAudioGraph())
+      graph (engineToUse.getAudioGraph()),
+      undo (undoToUse)
 {
     loadFileButton.setButtonText ("Load Clip File...");
     loadFileButton.onClick = [this] { loadClipFile(); };
@@ -19,12 +20,20 @@ TimelineComponent::TimelineComponent (AudioEngine& engineToUse)
     addAndMakeVisible (trackCombo);
 
     addClipButton.setButtonText ("Add Clip");
-    addClipButton.onClick = [this] { addClipToSelectedTrack(); };
+    addClipButton.onClick = [this]
+    {
+        undo.captureUndoState (graph);
+        addClipToSelectedTrack();
+    };
     addAndMakeVisible (addClipButton);
 
     deleteClipButton.setButtonText ("Delete Clip");
     deleteClipButton.setEnabled (false);
-    deleteClipButton.onClick = [this] { deleteSelectedClip(); };
+    deleteClipButton.onClick = [this]
+    {
+        undo.captureUndoState (graph);
+        deleteSelectedClip();
+    };
     addAndMakeVisible (deleteClipButton);
 
     statusText.setMultiLine (false, false);
@@ -212,6 +221,7 @@ void TimelineComponent::mouseDown (const juce::MouseEvent& event)
 
     if (clip >= 0)
     {
+        undo.captureUndoState (graph);
         dragging = true;
         resizing = onResizeEdge;
 

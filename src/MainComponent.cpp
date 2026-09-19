@@ -95,11 +95,11 @@ MainComponent::MainComponent()
     transportStatus.setCaretVisible (false);
     addAndMakeVisible (transportStatus);
 
-    processorControls = std::make_unique<ProcessorControlsComponent> (engine);
-    mixer = std::make_unique<MixerComponent> (engine.getAudioGraph());
-    timeline = std::make_unique<TimelineComponent> (engine);
+    processorControls = std::make_unique<ProcessorControlsComponent> (engine, undoManager);
+    mixer = std::make_unique<MixerComponent> (engine.getAudioGraph(), undoManager);
+    timeline = std::make_unique<TimelineComponent> (engine, undoManager);
     midi = std::make_unique<MidiComponent> (engine);
-    automation = std::make_unique<AutomationComponent> (engine);
+    automation = std::make_unique<AutomationComponent> (engine, undoManager);
 
     viewTabs.addTab ("DSP", juce::Colours::darkgrey, processorControls.get(), false);
     viewTabs.addTab ("Mixer", juce::Colours::darkgrey, mixer.get(), false);
@@ -185,6 +185,14 @@ void MainComponent::resized()
 
     statusLabel.setBounds (statusBounds);
     viewTabs.setBounds (bounds);
+}
+
+void MainComponent::refreshAfterUndoRedo()
+{
+    processorControls->refreshFromGraph();
+    mixer->refreshFromGraph();
+    timeline->repaint();
+    automation->repaint();
 }
 
 void MainComponent::timerCallback()
