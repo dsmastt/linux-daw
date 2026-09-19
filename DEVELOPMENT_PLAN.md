@@ -456,6 +456,8 @@ Add compressor
 
 ## Milestone 12 - Distortion
 
+**Status:** Completed
+
 Add guitar-oriented distortion/overdrive.
 
 ### Requirements
@@ -1327,11 +1329,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 12 - Distortion
+## Milestone 13 - Impulse Response Convolution
 
-The compressor works as the fourth chain element.
+Distortion works with four selectable clipping algorithms, drive, and tone.
 
-The next task is to add guitar-oriented distortion with selectable soft clipping, hard clipping, and waveshaping algorithms, plus drive and tone controls, kept modular so more algorithms can be added.
+The next task is to support cabinet impulse responses: load WAV IRs off the audio thread and convolve in real time with an efficient partitioned FFT implementation.
 
 Do not skip ahead.
 

@@ -4,6 +4,7 @@
 #include <chrono>
 
 #include "CompressorProcessor.h"
+#include "DistortionProcessor.h"
 #include "GainProcessor.h"
 #include "NoiseGateProcessor.h"
 #include "ParametricEqProcessor.h"
@@ -39,6 +40,10 @@ AudioEngine::AudioEngine()
     auto compressor = std::make_unique<CompressorProcessor>();
     compressorProcessor = compressor.get();
     processorChain.append (std::move (compressor));
+
+    auto distortion = std::make_unique<DistortionProcessor>();
+    distortionProcessor = distortion.get();
+    processorChain.append (std::move (distortion));
 }
 
 AudioEngine::~AudioEngine()
@@ -129,6 +134,24 @@ void AudioEngine::setCompressorMakeupGainDb (float makeupGainDb) noexcept
 {
     if (compressorProcessor != nullptr)
         compressorProcessor->setMakeupGainDb (makeupGainDb);
+}
+
+void AudioEngine::setDistortionDriveDb (float driveDb) noexcept
+{
+    if (distortionProcessor != nullptr)
+        distortionProcessor->setDriveDb (driveDb);
+}
+
+void AudioEngine::setDistortionTone (float tone) noexcept
+{
+    if (distortionProcessor != nullptr)
+        distortionProcessor->setTone (tone);
+}
+
+void AudioEngine::setDistortionMode (DistortionMode mode) noexcept
+{
+    if (distortionProcessor != nullptr)
+        distortionProcessor->setMode (mode);
 }
 
 juce::String AudioEngine::start (const juce::String& inputDeviceName,

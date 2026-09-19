@@ -134,6 +134,19 @@ int runAudioEngine (const juce::ArgumentList& args)
     if (const auto value = args.getValueForOption ("--comp-makeup-db"); value.isNotEmpty())
         compMakeupDb = value.getFloatValue();
 
+    float distDriveDb = 12.0f;
+    float distTone = 0.5f;
+    int distMode = 0;
+
+    if (const auto value = args.getValueForOption ("--dist-drive-db"); value.isNotEmpty())
+        distDriveDb = value.getFloatValue();
+
+    if (const auto value = args.getValueForOption ("--dist-tone"); value.isNotEmpty())
+        distTone = value.getFloatValue();
+
+    if (const auto value = args.getValueForOption ("--dist-mode"); value.isNotEmpty())
+        distMode = value.getIntValue();
+
     std::cout << "Input device:  " << inputDeviceName << std::endl;
     std::cout << "Output device: " << outputDeviceName << std::endl;
     std::cout << "Requested sample rate: " << static_cast<int> (sampleRate) << std::endl;
@@ -173,6 +186,13 @@ int runAudioEngine (const juce::ArgumentList& args)
     std::cout << "Compressor: threshold " << compThresholdDb << " dB, ratio " << compRatio
               << ":1, attack " << compAttackMs << " ms, release " << compReleaseMs
               << " ms, makeup " << compMakeupDb << " dB" << std::endl;
+
+    engine.setDistortionDriveDb (distDriveDb);
+    engine.setDistortionTone (distTone);
+    engine.setDistortionMode (static_cast<daw::DistortionMode> (distMode));
+
+    std::cout << "Distortion: mode " << distMode << ", drive " << distDriveDb
+              << " dB, tone " << distTone << std::endl;
 
     const auto error = engine.start (inputDeviceName, outputDeviceName, sampleRate, bufferSize);
 

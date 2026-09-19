@@ -24,6 +24,7 @@ target_sources(linux-daw PRIVATE
     src/AudioDeviceDiscovery.cpp
     src/AudioEngine.cpp
     src/CompressorProcessor.cpp
+    src/DistortionProcessor.cpp
     src/GainProcessor.cpp
     src/NoiseGateProcessor.cpp
     src/ParametricEqProcessor.cpp

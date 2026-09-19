@@ -5,11 +5,13 @@
 
 #include <juce_audio_devices/juce_audio_devices.h>
 
+#include "DistortionShaper.h"
 #include "ProcessorChain.h"
 
 namespace daw
 {
 class CompressorProcessor;
+class DistortionProcessor;
 class GainProcessor;
 class NoiseGateProcessor;
 class ParametricEqProcessor;
@@ -45,6 +47,10 @@ public:
     void setCompressorAttackMs (float attackMs) noexcept;
     void setCompressorReleaseMs (float releaseMs) noexcept;
     void setCompressorMakeupGainDb (float makeupGainDb) noexcept;
+
+    void setDistortionDriveDb (float driveDb) noexcept;
+    void setDistortionTone (float tone) noexcept;
+    void setDistortionMode (DistortionMode mode) noexcept;
 
     int getNumProcessors() const noexcept { return processorChain.size(); }
 
@@ -92,5 +98,6 @@ private:
     NoiseGateProcessor* gateProcessor = nullptr;
     ParametricEqProcessor* eqProcessor = nullptr;
     CompressorProcessor* compressorProcessor = nullptr;
+    DistortionProcessor* distortionProcessor = nullptr;
 };
 } // namespace daw
