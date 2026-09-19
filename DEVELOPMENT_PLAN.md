@@ -67,6 +67,8 @@ The AI coding assistant must:
 
 ## Milestone 1 - Basic CMake Application
 
+**Status:** Completed
+
 ### Goal
 
 Create the smallest possible C++ application that builds successfully with CMake.
@@ -101,6 +103,8 @@ Add initial CMake project
 # 2. JUCE Integration
 
 ## Milestone 2 - Add JUCE
+
+**Status:** Completed
 
 ### Goal
 
@@ -1305,11 +1309,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 2 - Add JUCE
+## Milestone 3 - Enumerate Audio Devices
 
-The current project already has a working CMake executable.
+JUCE is integrated and the project builds a working console application.
 
-The next task is to integrate JUCE and create the smallest possible JUCE application.
+The next task is to discover and print the audio devices available to the application.
 
 Do not skip ahead.
 

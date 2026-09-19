@@ -1,7 +1,22 @@
 #include <iostream>
 
-int main()
+#include <juce_core/juce_core.h>
+
+int main (int argc, char* argv[])
 {
-    std::cout << "Application started.\n";
-    return 0;
+    juce::ConsoleApplication app;
+
+    app.addHelpCommand ("--help|-h", "linux-daw usage:", true);
+    app.addVersionCommand ("--version|-v", "linux-daw 0.1.0");
+
+    app.addDefaultCommand ({ "",
+                             "",
+                             "Starts the application",
+                             "",
+                             [] (const juce::ArgumentList&)
+                             {
+                                 std::cout << "Application started." << std::endl;
+                             }});
+
+    return app.findAndRunCommand (argc, argv);
 }

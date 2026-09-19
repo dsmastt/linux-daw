@@ -1,6 +1,32 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.24)
 
-project(linux_daw LANGUAGES CXX)
+project(linux_daw VERSION 0.1.0 LANGUAGES C CXX)
 
-add_executable(linux-daw src/main.cpp)
+include(FetchContent)
+
+set(JUCE_BUILD_EXTRAS OFF CACHE BOOL "" FORCE)
+
+FetchContent_Declare(JUCE
+    GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
+    GIT_TAG 9.0.2
+    GIT_SHALLOW TRUE)
+
+FetchContent_MakeAvailable(JUCE)
+
+juce_add_console_app(linux-daw
+    PRODUCT_NAME "linux-daw"
+    COMPANY_NAME "linux-daw"
+    NEEDS_WEB_BROWSER FALSE
+    NEEDS_CURL FALSE)
+
+target_sources(linux-daw PRIVATE src/main.cpp)
+
 target_compile_features(linux-daw PRIVATE cxx_std_20)
+
+target_compile_definitions(linux-daw PRIVATE
+    JUCE_WEB_BROWSER=0
+    JUCE_USE_CURL=0)
+
+target_link_libraries(linux-daw
+    PRIVATE juce::juce_core
+    PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
