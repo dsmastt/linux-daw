@@ -76,25 +76,22 @@ void AudioGraph::stopPlayback() noexcept { playbackProcessor->stop(); }
 bool AudioGraph::isPlaybackPlaying() const noexcept { return playbackProcessor->isPlaying(); }
 double AudioGraph::getPlaybackPositionSeconds() const noexcept { return playbackProcessor->getPositionSeconds(); }
 double AudioGraph::getPlaybackLengthSeconds() const noexcept { return playbackProcessor->getLengthSeconds(); }
+std::int64_t AudioGraph::getPlaybackLengthFrames() const noexcept { return playbackProcessor->getPreparedFrames(); }
 void AudioGraph::setPlaybackPositionSeconds (double seconds) noexcept { playbackProcessor->setPositionSeconds (seconds); }
 
 void AudioGraph::playTransport() noexcept
 {
-    playbackProcessor->setPositionFrames (transport.getPositionSamples());
     transport.play();
-    playbackProcessor->play();
 }
 
 void AudioGraph::pauseTransport() noexcept
 {
     transport.pause();
-    playbackProcessor->pause();
 }
 
 void AudioGraph::stopTransport() noexcept
 {
     transport.stop();
-    playbackProcessor->stop();
 }
 
 int AudioGraph::getNumProcessors() const noexcept
@@ -140,7 +137,11 @@ void AudioGraph::processWithInput (const float* const* inputChannels,
                                                   outputChannels,
                                                   numChannels,
                                                   numSamples,
-                                                  anyTrackSoloed);
+                                                  anyTrackSoloed,
+                                                  transport.getPositionSamples(),
+                                                  ClipSource { playbackProcessor->getPreparedData(),
+                                                               playbackProcessor->getPreparedFrames(),
+                                                               playbackProcessor->getPreparedChannels() });
 
     playbackProcessor->process (outputChannels, numChannels, numSamples);
 }

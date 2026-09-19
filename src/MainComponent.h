@@ -7,6 +7,7 @@
 #include "MeterComponent.h"
 #include "MixerComponent.h"
 #include "ProcessorControlsComponent.h"
+#include "TimelineComponent.h"
 
 namespace daw
 {
@@ -46,6 +47,7 @@ private:
     juce::TabbedComponent viewTabs;
     std::unique_ptr<ProcessorControlsComponent> processorControls;
     std::unique_ptr<MixerComponent> mixer;
+    std::unique_ptr<TimelineComponent> timeline;
     MeterComponent inputMeter;
     MeterComponent outputMeter;
     juce::TextEditor statusLabel;

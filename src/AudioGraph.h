@@ -82,6 +82,7 @@ public:
     bool isPlaybackPlaying() const noexcept;
     double getPlaybackPositionSeconds() const noexcept;
     double getPlaybackLengthSeconds() const noexcept;
+    std::int64_t getPlaybackLengthFrames() const noexcept;
     void setPlaybackPositionSeconds (double seconds) noexcept;
 
     // Transport.

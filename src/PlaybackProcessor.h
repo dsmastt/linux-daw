@@ -29,6 +29,11 @@ public:
     double getPositionSeconds() const noexcept;
     double getLengthSeconds() const noexcept;
 
+    bool isPrepared() const noexcept { return prepared; }
+    const float* getPreparedData() const noexcept { return playbackData.empty() ? nullptr : playbackData.data(); }
+    std::int64_t getPreparedFrames() const noexcept { return playbackFrames; }
+    int getPreparedChannels() const noexcept { return playbackChannels; }
+
     void prepare (double sampleRate, int bufferSize) noexcept override;
     void process (float* const* channels, int numChannels, int numSamples) noexcept override;
     void reset() noexcept override;

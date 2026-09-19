@@ -292,6 +292,56 @@ juce::AudioPluginInstance* Track::getVst3PluginInstance() const noexcept
     return vst3Processor != nullptr ? vst3Processor->getInstance() : nullptr;
 }
 
+int Track::addClip (std::int64_t startSamples, std::int64_t lengthSamples, std::int64_t sourceOffsetSamples)
+{
+    const int index = clipCount.load (std::memory_order_relaxed);
+
+    if (index >= maxClipsPerTrack)
+        return -1;
+
+    auto& clip = clips[static_cast<size_t> (index)];
+    clip.startSamples.store (startSamples, std::memory_order_relaxed);
+    clip.lengthSamples.store (lengthSamples, std::memory_order_relaxed);
+    clip.sourceOffsetSamples.store (sourceOffsetSamples, std::memory_order_relaxed);
+
+    clipCount.store (index + 1, std::memory_order_release);
+
+    return index;
+}
+
+void Track::removeClip (int clipIndex) noexcept
+{
+    const int count = clipCount.load (std::memory_order_relaxed);
+
+    if (clipIndex < 0 || clipIndex >= count)
+        return;
+
+    for (int i = clipIndex; i < count - 1; ++i)
+    {
+        clips[static_cast<size_t> (i)].startSamples.store (clips[static_cast<size_t> (i + 1)].startSamples.load(), std::memory_order_relaxed);
+        clips[static_cast<size_t> (i)].lengthSamples.store (clips[static_cast<size_t> (i + 1)].lengthSamples.load(), std::memory_order_relaxed);
+        clips[static_cast<size_t> (i)].sourceOffsetSamples.store (clips[static_cast<size_t> (i + 1)].sourceOffsetSamples.load(), std::memory_order_relaxed);
+    }
+
+    clipCount.store (count - 1, std::memory_order_release);
+}
+
+void Track::moveClip (int clipIndex, std::int64_t newStartSamples) noexcept
+{
+    if (clipIndex < 0 || clipIndex >= clipCount.load())
+        return;
+
+    clips[static_cast<size_t> (clipIndex)].startSamples.store (newStartSamples, std::memory_order_relaxed);
+}
+
+void Track::resizeClip (int clipIndex, std::int64_t newLengthSamples) noexcept
+{
+    if (clipIndex < 0 || clipIndex >= clipCount.load())
+        return;
+
+    clips[static_cast<size_t> (clipIndex)].lengthSamples.store (std::max<std::int64_t> (1, newLengthSamples), std::memory_order_relaxed);
+}
+
 void Track::prepare (double sampleRate, int bufferSize) noexcept
 {
     numChannels = maxChannels;
@@ -310,7 +360,9 @@ void Track::process (const float* const* input,
                      float* const* output,
                      int numChannelsIn,
                      int numSamples,
-                     bool anyTrackSoloed) noexcept
+                     bool anyTrackSoloed,
+                     std::int64_t transportPositionSamples,
+                     const ClipSource& clipSource) noexcept
 {
     if (isMuted() || (anyTrackSoloed && !isSoloed()))
         return;
@@ -333,6 +385,42 @@ void Track::process (const float* const* input,
     scratchPointers[1] = scratch[1].data();
 
     chain.process (scratchPointers, channels, frames);
+
+    const int numClips = clipCount.load (std::memory_order_acquire);
+
+    if (numClips > 0 && clipSource.data != nullptr && clipSource.frames > 0)
+    {
+        const int sourceChannels = clipSource.channels;
+
+        for (int clipIndex = 0; clipIndex < numClips; ++clipIndex)
+        {
+            const auto& clip = clips[static_cast<size_t> (clipIndex)];
+            const auto clipStart = clip.startSamples.load (std::memory_order_relaxed);
+            const auto clipLength = clip.lengthSamples.load (std::memory_order_relaxed);
+            const auto sourceOffset = clip.sourceOffsetSamples.load (std::memory_order_relaxed);
+
+            for (int frame = 0; frame < frames; ++frame)
+            {
+                const auto absolutePosition = transportPositionSamples + frame;
+
+                if (absolutePosition < clipStart || absolutePosition >= clipStart + clipLength)
+                    continue;
+
+                const auto sourcePosition = sourceOffset + (absolutePosition - clipStart);
+
+                if (sourcePosition < 0 || sourcePosition >= clipSource.frames)
+                    continue;
+
+                const auto* sourceSample = clipSource.data + sourcePosition * sourceChannels;
+
+                for (int channel = 0; channel < channels; ++channel)
+                {
+                    const int sourceChannel = std::min (channel, sourceChannels - 1);
+                    scratchPointers[channel][frame] += sourceSample[sourceChannel];
+                }
+            }
+        }
+    }
 
     const float volume = volumeLinear.load (std::memory_order_relaxed);
     const float pan = panValue.load (std::memory_order_relaxed);

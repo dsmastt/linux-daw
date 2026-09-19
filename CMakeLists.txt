@@ -45,6 +45,7 @@ target_sources(linux-daw PRIVATE
     src/MeterComponent.cpp
     src/MixerComponent.cpp
     src/ProcessorControlsComponent.cpp
+    src/TimelineComponent.cpp
     ${CORE_SOURCES})
 
 target_compile_features(linux-daw PRIVATE cxx_std_20)

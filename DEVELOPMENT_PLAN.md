@@ -915,6 +915,8 @@ Add transport system
 
 ## Milestone 26 - Timeline
 
+**Status:** Completed
+
 Create a basic arrangement timeline.
 
 ```text
@@ -1355,11 +1357,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 26 - Timeline
+## Milestone 27 - MIDI Input
 
-The transport works: play, pause, stop, sample position, and tempo, with playback driven from the audio thread.
+The timeline works: clips can be added, moved, resized, and played back, verified numerically end-to-end.
 
-The next task is to create a basic arrangement timeline with clips that can be positioned, moved, resized, and played back.
+The next task is to add MIDI: device discovery, MIDI input with note events, velocity, and controller events.
 
 Do not skip ahead.
 

@@ -1,6 +1,9 @@
 #include <iostream>
 
+#include <cmath>
+
 #include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
 
@@ -10,6 +13,40 @@
 
 namespace
 {
+juce::File createClipTestFile()
+{
+    const auto file = juce::File ("/tmp/kilo/linux-daw-clip-test.wav");
+
+    if (auto stream = file.createOutputStream())
+    {
+        std::unique_ptr<juce::OutputStream> outputStream = std::move (stream);
+
+        juce::WavAudioFormat format;
+
+        const auto options = juce::AudioFormatWriter::Options{}
+                                 .withSampleRate (48000.0)
+                                 .withNumChannels (1)
+                                 .withBitsPerSample (16)
+                                 .withQualityOptionIndex (0);
+
+        if (auto writer = format.createWriterFor (outputStream, options))
+        {
+            constexpr int numSamples = 48000 * 2;
+
+            juce::AudioBuffer<float> buffer (1, numSamples);
+            auto* data = buffer.getWritePointer (0);
+
+            for (int i = 0; i < numSamples; ++i)
+                data[i] = 0.5f * std::sin (2.0f * 3.14159265358979323846f * 440.0f * i / 48000.0f);
+
+            const float* pointers[1] = { data };
+            writer->writeFromFloatArrays (pointers, 1, numSamples);
+            writer->flush();
+        }
+    }
+
+    return file;
+}
 juce::AudioIODeviceType* findAlsaType (juce::OwnedArray<juce::AudioIODeviceType>& types)
 {
     for (auto* type : types)
@@ -87,6 +124,18 @@ int runTest (const juce::ArgumentList& args)
     std::cout << "Bypassed: " << (graph.isVst3PluginBypassed() ? "yes" : "no") << std::endl;
     graph.setVst3PluginBypassed (false);
 
+    const auto clipFile = createClipTestFile();
+    const auto clipLoadError = graph.loadPlaybackFile (clipFile);
+
+    if (clipLoadError.isNotEmpty())
+    {
+        std::cout << "Failed to load clip file: " << clipLoadError << std::endl;
+        graph.unloadVst3Plugin();
+        return 1;
+    }
+
+    std::cout << "Clip file loaded" << std::endl;
+
     juce::AudioDeviceManager deviceManager;
     juce::OwnedArray<juce::AudioIODeviceType> types;
     deviceManager.createAudioDeviceTypes (types);
@@ -136,15 +185,48 @@ int runTest (const juce::ArgumentList& args)
 
     std::cout << "Processed " << callbacks << " callbacks, xruns: " << xruns << std::endl;
 
-    engine.stop();
-    graph.unloadVst3Plugin();
-
-    std::cout << "Plugin unloaded" << std::endl;
-
     const auto expectedPosition = 48000LL * 2;
     const auto transportOk = transportPosition > expectedPosition - 2000 && transportPosition < expectedPosition + 2000;
 
-    if (callbacks == 0 || xruns != 0 || !transportOk)
+    // Timeline clip playback test: add a clip, and verify audio reaches the
+    // output while the transport plays.
+    const auto clipFrames = graph.getPlaybackLengthFrames();
+
+    if (clipFrames <= 0)
+    {
+        std::cout << "Clip file was not prepared" << std::endl;
+        engine.stop();
+        graph.unloadVst3Plugin();
+        return 1;
+    }
+
+    graph.getTrack (0).addClip (0, clipFrames, 0);
+
+    std::cout << "Clip added: " << clipFrames << " frames" << std::endl;
+
+    graph.playTransport();
+    juce::Thread::sleep (1000);
+    const float clipPeak = engine.consumeOutputPeak();
+    std::cout << "Output peak during clip playback: " << clipPeak << std::endl;
+    graph.stopTransport();
+
+    graph.getTrack (0).moveClip (0, 24000);
+    graph.playTransport();
+    juce::Thread::sleep (1000);
+    const float movedPeak = engine.consumeOutputPeak();
+    std::cout << "Output peak after moving clip: " << movedPeak << std::endl;
+    graph.stopTransport();
+
+    graph.getTrack (0).resizeClip (0, 24000);
+    graph.playTransport();
+    juce::Thread::sleep (1000);
+    const float resizedPeak = engine.consumeOutputPeak();
+    std::cout << "Output peak after resizing clip: " << resizedPeak << std::endl;
+    graph.stopTransport();
+
+    const bool clipsOk = clipPeak > 0.2f && movedPeak > 0.2f && resizedPeak > 0.2f;
+
+    if (callbacks == 0 || xruns != 0 || !transportOk || !clipsOk)
     {
         std::cout << "VST3 host test FAILED" << std::endl;
         return 1;

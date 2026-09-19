@@ -6,6 +6,7 @@
 
 #include <juce_core/juce_core.h>
 
+#include "Clip.h"
 #include "DistortionShaper.h"
 #include "ProcessorChain.h"
 
@@ -86,6 +87,13 @@ public:
 
     int getNumProcessors() const noexcept { return chain.size(); }
 
+    int addClip (std::int64_t startSamples, std::int64_t lengthSamples, std::int64_t sourceOffsetSamples = 0);
+    void removeClip (int clipIndex) noexcept;
+    void moveClip (int clipIndex, std::int64_t newStartSamples) noexcept;
+    void resizeClip (int clipIndex, std::int64_t newLengthSamples) noexcept;
+    int getNumClips() const noexcept { return clipCount.load(); }
+    const Clip& getClip (int clipIndex) const noexcept { return clips[static_cast<size_t> (clipIndex)]; }
+
     void prepare (double sampleRate, int bufferSize) noexcept;
     void reset() noexcept;
 
@@ -93,7 +101,9 @@ public:
                   float* const* output,
                   int numChannels,
                   int numSamples,
-                  bool anyTrackSoloed) noexcept;
+                  bool anyTrackSoloed,
+                  std::int64_t transportPositionSamples,
+                  const ClipSource& clipSource) noexcept;
 
 private:
     static constexpr int maxChannels = 2;
@@ -117,5 +127,8 @@ private:
 
     std::vector<std::vector<float>> scratch;
     int numChannels = 0;
+
+    Clip clips[maxClipsPerTrack];
+    std::atomic<int> clipCount { 0 };
 };
 } // namespace daw
