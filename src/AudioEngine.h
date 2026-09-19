@@ -6,6 +6,7 @@
 #include <juce_audio_devices/juce_audio_devices.h>
 
 #include "AudioGraph.h"
+#include "AudioRecorder.h"
 
 namespace daw
 {
@@ -37,6 +38,12 @@ public:
 
     AudioGraph& getAudioGraph() noexcept { return audioGraph; }
 
+    juce::String startRecording (const juce::File& file);
+    void stopRecording();
+    bool isRecording() const noexcept { return recorder.isRecording(); }
+    std::uint64_t getFramesWritten() const noexcept { return recorder.getFramesWritten(); }
+    int getDroppedRecordingBlocks() const noexcept { return recorder.getDroppedBlocks(); }
+
 private:
     void audioDeviceIOCallbackWithContext (const float* const* inputChannelData,
                                            int numInputChannels,
@@ -64,5 +71,6 @@ private:
     juce::AudioIODevice* currentDevice = nullptr;
     int callbacksSinceXRunCheck = 0;
     AudioGraph audioGraph;
+    AudioRecorder recorder;
 };
 } // namespace daw

@@ -234,12 +234,31 @@ int runAudioEngine (const juce::ArgumentList& args)
         std::cout << "IR: " << irPath << " (" << graph.getImpulseResponseLength() << " samples)" << std::endl;
     }
 
+    juce::String recordPath;
+
+    if (const auto value = args.getValueForOption ("--record"); value.isNotEmpty())
+        recordPath = value;
+
     const auto error = engine.start (inputDeviceName, outputDeviceName, sampleRate, bufferSize);
 
     if (error.isNotEmpty())
     {
         std::cout << "Failed to start audio: " << error << std::endl;
         return 1;
+    }
+
+    if (recordPath.isNotEmpty())
+    {
+        const auto recordError = engine.startRecording (juce::File (recordPath));
+
+        if (recordError.isNotEmpty())
+        {
+            std::cout << "Failed to start recording: " << recordError << std::endl;
+            engine.stop();
+            return 1;
+        }
+
+        std::cout << "Recording to: " << recordPath << std::endl;
     }
 
     const auto totalLatencySamples = engine.getInputLatencySamples() + engine.getOutputLatencySamples();
@@ -280,6 +299,14 @@ int runAudioEngine (const juce::ArgumentList& args)
     }
 
     reportStats();
+
+    if (engine.isRecording())
+    {
+        engine.stopRecording();
+        std::cout << "Recording finished: " << recordPath << " ("
+                  << engine.getFramesWritten() << " frames, "
+                  << engine.getDroppedRecordingBlocks() << " dropped blocks)" << std::endl;
+    }
 
     if (engine.isRunning())
     {

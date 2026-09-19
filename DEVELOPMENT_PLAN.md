@@ -592,6 +592,8 @@ Separate audio engine and DSP architecture
 
 ## Milestone 16 - WAV Recording
 
+**Status:** Completed
+
 ### Goal
 
 Record audio from the input.
@@ -1335,11 +1337,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 16 - WAV Recording
+## Milestone 17 - Audio File Playback
 
-The architecture is layered: `Application` -> `AudioEngine` (device I/O only) -> `AudioGraph` (DSP chain).
+Recording works: input audio reaches a WAV file with correct rate and channel configuration via a producer/consumer design that never blocks the audio thread.
 
-The next task is to record input audio to WAV with a producer/consumer design so the audio thread never touches the disk.
+The next task is to play recorded WAV files through the engine: load, play, pause, stop, seek, with sample-rate handling.
 
 Do not skip ahead.
 

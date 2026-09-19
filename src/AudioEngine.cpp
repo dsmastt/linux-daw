@@ -60,6 +60,23 @@ void AudioEngine::stop()
     outputLatencySamples.store (0);
     numInputChannels.store (0);
     numOutputChannels.store (0);
+
+    recorder.stopRecording();
+}
+
+juce::String AudioEngine::startRecording (const juce::File& file)
+{
+    const auto rate = sampleRate.load();
+
+    if (rate <= 0.0)
+        return "Audio engine is not running";
+
+    return recorder.startRecording (file, rate, numInputChannels.load());
+}
+
+void AudioEngine::stopRecording()
+{
+    recorder.stopRecording();
 }
 
 void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputChannelData,
@@ -70,6 +87,8 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
                                                     const juce::AudioIODeviceCallbackContext&)
 {
     const auto startTime = std::chrono::steady_clock::now();
+
+    recorder.recordBlock (inputChannelData, numInputChannelsIn, numSamples);
 
     const int channelsToCopy = std::min (numInputChannelsIn, numOutputChannelsIn);
 
