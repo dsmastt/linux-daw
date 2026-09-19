@@ -10,6 +10,7 @@
 #include "ParametricEqProcessor.h"
 #include "PlaybackProcessor.h"
 #include "ReverbProcessor.h"
+#include "Vst3HostProcessor.h"
 
 namespace daw
 {
@@ -34,6 +35,10 @@ AudioGraph::AudioGraph()
     auto distortion = std::make_unique<DistortionProcessor>();
     distortionProcessor = distortion.get();
     chain.append (std::move (distortion));
+
+    auto vst3 = std::make_unique<Vst3HostProcessor>();
+    vst3Processor = vst3.get();
+    chain.append (std::move (vst3));
 
     auto convolution = std::make_unique<ConvolutionProcessor>();
     convolutionProcessor = convolution.get();
@@ -255,6 +260,30 @@ void AudioGraph::setPlaybackPositionSeconds (double seconds) noexcept
 {
     if (playbackProcessor != nullptr)
         playbackProcessor->setPositionSeconds (seconds);
+}
+
+juce::String AudioGraph::loadVst3Plugin (const juce::PluginDescription& description, double sampleRate, int bufferSize)
+{
+    if (vst3Processor == nullptr)
+        return "VST3 processor unavailable";
+
+    return vst3Processor->loadPlugin (description, sampleRate, bufferSize);
+}
+
+void AudioGraph::unloadVst3Plugin() noexcept
+{
+    if (vst3Processor != nullptr)
+        vst3Processor->unloadPlugin();
+}
+
+bool AudioGraph::isVst3PluginLoaded() const noexcept
+{
+    return vst3Processor != nullptr && vst3Processor->isLoaded();
+}
+
+juce::String AudioGraph::getVst3PluginName() const noexcept
+{
+    return vst3Processor != nullptr ? vst3Processor->getPluginName() : juce::String();
 }
 
 void AudioGraph::prepare (double sampleRate, int bufferSize) noexcept

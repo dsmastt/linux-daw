@@ -762,6 +762,8 @@ Add audio level meters
 
 ## Milestone 21 - VST3 Host Foundation
 
+**Status:** Completed
+
 ### Goal
 
 Prepare the engine to host external VST3 plugins.
@@ -1345,11 +1347,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 21 - VST3 Host Foundation
+## Milestone 22 - Plugin Management
 
-Input/output meters with peak detection and a clipping indicator work through lock-free atomic communication.
+VST3 hosting works: plugins are discovered, loaded, processed in the chain, and unloaded safely, verified end-to-end with a built-in test plugin.
 
-The next task is to prepare the engine to host external VST3 plugins: discover, load, process audio through, and unload them safely.
+The next task is to add plugin management: a plugin browser, loading, removal, bypass, parameter interaction, and editor windows where supported.
 
 Do not skip ahead.
 

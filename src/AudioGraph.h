@@ -6,6 +6,11 @@
 #include "DistortionShaper.h"
 #include "ProcessorChain.h"
 
+namespace juce
+{
+struct PluginDescription;
+} // namespace juce
+
 namespace daw
 {
 class CompressorProcessor;
@@ -16,6 +21,7 @@ class NoiseGateProcessor;
 class ParametricEqProcessor;
 class PlaybackProcessor;
 class ReverbProcessor;
+class Vst3HostProcessor;
 
 class AudioGraph final : public AudioProcessor
 {
@@ -67,6 +73,11 @@ public:
     double getPlaybackLengthSeconds() const noexcept;
     void setPlaybackPositionSeconds (double seconds) noexcept;
 
+    juce::String loadVst3Plugin (const juce::PluginDescription& description, double sampleRate, int bufferSize);
+    void unloadVst3Plugin() noexcept;
+    bool isVst3PluginLoaded() const noexcept;
+    juce::String getVst3PluginName() const noexcept;
+
     int getNumProcessors() const noexcept { return chain.size(); }
 
     void prepare (double sampleRate, int bufferSize) noexcept override;
@@ -83,5 +94,6 @@ private:
     ConvolutionProcessor* convolutionProcessor = nullptr;
     ReverbProcessor* reverbProcessor = nullptr;
     PlaybackProcessor* playbackProcessor = nullptr;
+    Vst3HostProcessor* vst3Processor = nullptr;
 };
 } // namespace daw
