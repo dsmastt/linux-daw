@@ -860,6 +860,8 @@ Add track architecture
 
 ## Milestone 24 - Mixer
 
+**Status:** Completed
+
 Build the mixer UI.
 
 Each channel:
@@ -1351,11 +1353,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 24 - Mixer
+## Milestone 25 - Transport
 
-The track model is in place: four tracks, each with volume, pan, mute, solo, and its own DSP and plugin chain, mixed to a master.
+The mixer UI works: a channel strip per track with name, plugin status, volume, pan, and mute/solo controls, driving the track model in real time.
 
-The next task is to build the mixer UI with a channel strip per track: name, plugin list, volume, and mute/solo controls.
+The next task is to add a transport system: play, pause, stop, position, tempo, and sample position.
 
 Do not skip ahead.
 

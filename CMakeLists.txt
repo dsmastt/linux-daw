@@ -42,6 +42,7 @@ target_sources(linux-daw PRIVATE
     src/MainComponent.cpp
     src/MainWindow.cpp
     src/MeterComponent.cpp
+    src/MixerComponent.cpp
     src/ProcessorControlsComponent.cpp
     ${CORE_SOURCES})
 

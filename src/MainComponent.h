@@ -5,6 +5,7 @@
 
 #include "AudioEngine.h"
 #include "MeterComponent.h"
+#include "MixerComponent.h"
 #include "ProcessorControlsComponent.h"
 
 namespace daw
@@ -36,7 +37,9 @@ private:
     juce::ComboBox bufferCombo;
     juce::TextButton startButton;
     juce::TextButton stopButton;
+    juce::TabbedComponent viewTabs;
     std::unique_ptr<ProcessorControlsComponent> processorControls;
+    std::unique_ptr<MixerComponent> mixer;
     MeterComponent inputMeter;
     MeterComponent outputMeter;
     juce::TextEditor statusLabel;

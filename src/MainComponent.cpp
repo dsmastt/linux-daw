@@ -27,7 +27,8 @@ void selectItemContaining (juce::ComboBox& combo, const juce::String& text)
 } // namespace
 
 MainComponent::MainComponent()
-    : inputMeter ("Input"),
+    : viewTabs (juce::TabbedButtonBar::TabsAtTop),
+      inputMeter ("Input"),
       outputMeter ("Output")
 {
     titleLabel.setText ("Linux DAW", juce::dontSendNotification);
@@ -66,7 +67,11 @@ MainComponent::MainComponent()
     addAndMakeVisible (stopButton);
 
     processorControls = std::make_unique<ProcessorControlsComponent> (engine);
-    addAndMakeVisible (*processorControls);
+    mixer = std::make_unique<MixerComponent> (engine.getAudioGraph());
+
+    viewTabs.addTab ("DSP", juce::Colours::darkgrey, processorControls.get(), false);
+    viewTabs.addTab ("Mixer", juce::Colours::darkgrey, mixer.get(), false);
+    addAndMakeVisible (viewTabs);
 
     addAndMakeVisible (inputMeter);
     addAndMakeVisible (outputMeter);
@@ -130,7 +135,7 @@ void MainComponent::resized()
     outputMeter.setBounds (metersBounds.removeFromLeft (50));
 
     statusLabel.setBounds (statusBounds);
-    processorControls->setBounds (bounds);
+    viewTabs.setBounds (bounds);
 }
 
 void MainComponent::timerCallback()
