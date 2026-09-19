@@ -2,9 +2,11 @@
 
 #include <atomic>
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 #include <juce_core/juce_core.h>
+#include <juce_events/juce_events.h>
 
 #include "AudioProcessor.h"
 
@@ -14,6 +16,7 @@ class PlaybackProcessor final : public AudioProcessor
 {
 public:
     juce::String getName() const override { return "Playback"; }
+
     juce::String loadFile (const juce::File& file);
     void clearFile() noexcept;
 
@@ -29,14 +32,14 @@ public:
     void setPositionFrames (std::int64_t frames) noexcept;
     void setPositionSeconds (double seconds) noexcept;
 
-    std::int64_t getLengthFrames() const noexcept { return playbackFrames; }
+    std::int64_t getLengthFrames() const noexcept;
     double getPositionSeconds() const noexcept;
     double getLengthSeconds() const noexcept;
 
-    bool isPrepared() const noexcept { return prepared; }
-    const float* getPreparedData() const noexcept { return playbackData.empty() ? nullptr : playbackData.data(); }
-    std::int64_t getPreparedFrames() const noexcept { return playbackFrames; }
-    int getPreparedChannels() const noexcept { return playbackChannels; }
+    bool isPrepared() const noexcept { return prepareReady.load(); }
+    const float* getPreparedData() const noexcept;
+    std::int64_t getPreparedFrames() const noexcept;
+    int getPreparedChannels() const noexcept;
 
     void prepare (double sampleRate, int bufferSize) noexcept override;
     void process (float* const* channels, int numChannels, int numSamples) noexcept override;
@@ -45,21 +48,47 @@ public:
 private:
     static constexpr int maxChannels = 2;
 
+    struct PreparedData
+    {
+        std::vector<float> data;
+        std::int64_t frames = 0;
+        int channels = 0;
+        double sampleRate = 0.0;
+    };
+
+    class PrepareThread final : public juce::Thread
+    {
+    public:
+        explicit PrepareThread (PlaybackProcessor& ownerToUse)
+            : juce::Thread ("PlaybackPreparation"), owner (ownerToUse)
+        {
+        }
+
+        void run() override;
+
+    private:
+        PlaybackProcessor& owner;
+    };
+
+    bool buildPendingPreparation();
+
     std::vector<float> sourceData;
     double sourceSampleRate = 0.0;
     int sourceChannels = 0;
     juce::String loadedFilePath;
 
-    std::vector<float> playbackData;
-    int playbackChannels = 0;
-    std::int64_t playbackFrames = 0;
-    double playbackSampleRate = 0.0;
+    PreparedData prepared[2];
+    std::atomic<int> activeIndex { 0 };
+    std::atomic<bool> prepareReady { false };
+    std::atomic<bool> preparePending { false };
+    std::atomic<double> targetSampleRate { 0.0 };
+
+    std::unique_ptr<PrepareThread> prepareThread;
 
     std::atomic<bool> playing { false };
     std::atomic<std::int64_t> position { 0 };
     std::atomic<double> pendingPositionSeconds { -1.0 };
 
-    bool prepared = false;
     int numChannels = 0;
 };
 } // namespace daw

@@ -1116,6 +1116,8 @@ Add audio performance profiling
 
 ## Milestone 34 - Background Processing
 
+**Status:** Completed
+
 Move appropriate non-real-time work off the audio thread.
 
 Potential candidates:
@@ -1371,11 +1373,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 34 - Background Processing
+## Milestone 35 - Waveform Generation
 
-Performance profiling works: callback timing, audio-thread duty, per-processor DSP cost, plugin cost, memory usage, underruns, and latency are all measurable.
+Background processing works: IR partition building, playback resampling, and plugin scanning all run off the audio thread with double-buffered publication.
 
-The next task is to move non-real-time work off the audio thread: file loading, sample preparation, and plugin scanning.
+The next task is to display audio waveforms for clips: background waveform generation, cached waveform data, efficient rendering, and zooming.
 
 Do not skip ahead.
 

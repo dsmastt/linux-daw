@@ -251,6 +251,17 @@ int runTest (const juce::ArgumentList& args)
 
     std::cout << "Clip file loaded" << std::endl;
 
+    const auto irError = graph.getTrack (0).loadImpulseResponse (juce::File ("/tmp/kilo/test-ir.wav"));
+
+    if (irError.isNotEmpty())
+    {
+        std::cout << "Failed to load impulse response: " << irError << std::endl;
+        graph.unloadVst3Plugin();
+        return 1;
+    }
+
+    std::cout << "Impulse response loaded" << std::endl;
+
     juce::AudioDeviceManager deviceManager;
     juce::OwnedArray<juce::AudioIODeviceType> types;
     deviceManager.createAudioDeviceTypes (types);
@@ -302,6 +313,9 @@ int runTest (const juce::ArgumentList& args)
 
     const auto expectedPosition = 48000LL * 2;
     const auto transportOk = transportPosition > expectedPosition - 2000 && transportPosition < expectedPosition + 2000;
+
+    const auto irPreparedOk = graph.getTrack (0).getImpulseResponseLength() > 0;
+    std::cout << "Impulse response prepared in background: " << (irPreparedOk ? "yes" : "no") << std::endl;
 
     float midiTrackParamValue = 0.0f;
 
@@ -550,7 +564,7 @@ int runTest (const juce::ArgumentList& args)
 
     if (callbacks == 0 || xruns != 0 || !transportOk || !clipsOk || !midiOk || !midiTrackOk
         || !volumeAutomationOk || !pluginAutomationOk || !roundTripOk || !undoOk1 || !undoOk2 || !redoOk
-        || !profilingOk)
+        || !profilingOk || !irPreparedOk)
     {
         std::cout << "VST3 host test FAILED" << std::endl;
         return 1;

@@ -412,7 +412,8 @@ public:
 ProcessorControlsComponent::PluginTab::PluginTab (AudioEngine& engineToUse, UndoManager& undoToUse)
     : engine (engineToUse),
       graph (engineToUse.getAudioGraph()),
-      undo (undoToUse)
+      undo (undoToUse),
+      scanPool (1)
 {
     rescanButton.setButtonText ("Rescan");
     rescanButton.onClick = [this] { rescanPlugins(); };
@@ -514,14 +515,30 @@ void ProcessorControlsComponent::PluginTab::rescanPlugins()
     paths.add ("/usr/local/lib/vst3");
     paths.add ("build/linux-daw-test-plugin_artefacts/VST3");
 
-    scannedPlugins = scanVst3Plugins (paths);
+    const juce::Component::SafePointer<PluginTab> safeThis (this);
 
-    pluginCombo.clear();
+    scanPool.addJob ([safeThis, paths]
+    {
+        auto found = scanVst3Plugins (paths);
 
-    for (const auto& plugin : scannedPlugins)
-        pluginCombo.addItem (plugin.name, pluginCombo.getNumItems() + 1);
+        juce::MessageManager::callAsync ([safeThis, found = std::move (found)]
+        {
+            if (safeThis == nullptr)
+                return;
 
-    statusText.setText ("Found " + juce::String (scannedPlugins.size()) + " VST3 plugins", juce::dontSendNotification);
+            safeThis->scannedPlugins = found;
+
+            safeThis->pluginCombo.clear();
+
+            for (const auto& plugin : safeThis->scannedPlugins)
+                safeThis->pluginCombo.addItem (plugin.name, safeThis->pluginCombo.getNumItems() + 1);
+
+            safeThis->statusText.setText ("Found " + juce::String (safeThis->scannedPlugins.size()) + " VST3 plugins",
+                                          juce::dontSendNotification);
+        });
+
+        return true;
+    });
 }
 
 void ProcessorControlsComponent::PluginTab::loadSelectedPlugin()

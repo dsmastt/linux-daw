@@ -28,7 +28,10 @@ juce::String ConvolutionProcessor::loadImpulseResponse (const juce::File& file)
     impulseResponseSampleRate = reader->sampleRate;
     impulseResponseFilePath = file.getFullPathName();
     hasImpulseResponse_.store (true, std::memory_order_release);
-    partitionsReady = false;
+    prepareReady.store (false, std::memory_order_release);
+
+    prepared[0] = PreparedPartitions {};
+    prepared[1] = PreparedPartitions {};
 
     return {};
 }
@@ -37,44 +40,83 @@ void ConvolutionProcessor::clearImpulseResponse()
 {
     hasImpulseResponse_.store (false, std::memory_order_release);
     impulseResponse.clear();
-    processedImpulseResponse.clear();
-    irSpectra.clear();
     impulseResponseSampleRate = 0.0;
-    partitionsReady = false;
-    numPartitions = 0;
+    impulseResponseFilePath.clear();
+    prepareReady.store (false, std::memory_order_release);
+
+    prepared[0] = PreparedPartitions {};
+    prepared[1] = PreparedPartitions {};
 }
 
 int ConvolutionProcessor::getImpulseResponseLength() const noexcept
 {
-    return processedImpulseResponse.empty()
+    const auto& active = prepared[activeIndex.load (std::memory_order_acquire)];
+
+    return active.processedImpulseResponse.empty()
              ? static_cast<int> (impulseResponse.size())
-             : static_cast<int> (processedImpulseResponse.size());
+             : static_cast<int> (active.processedImpulseResponse.size());
 }
 
 void ConvolutionProcessor::prepare (double sampleRate, int bufferSize) noexcept
 {
-    buildPartitions (sampleRate, bufferSize);
-}
+    if (!hasImpulseResponse_.load (std::memory_order_acquire) || impulseResponse.empty()
+        || bufferSize <= 0 || sampleRate <= 0.0)
+    {
+        prepareReady.store (false, std::memory_order_release);
+        return;
+    }
 
-void ConvolutionProcessor::reset() noexcept
-{
-    std::fill (inputHistory.begin(), inputHistory.end(), 0.0f);
-    std::fill (fftBuffer.begin(), fftBuffer.end(), 0.0f);
-    std::fill (accumulator.begin(), accumulator.end(), 0.0f);
-
-    for (auto& history : channelHistories)
-        std::fill (history.begin(), history.end(), 0.0f);
-
-    numChannels = 0;
-}
-
-void ConvolutionProcessor::buildPartitions (double sampleRate, int bufferSize) noexcept
-{
-    partitionsReady = false;
-
-    if (!hasImpulseResponse_.load() || impulseResponse.empty() || bufferSize <= 0 || sampleRate <= 0.0)
+    if (prepareReady.load (std::memory_order_acquire)
+        && prepared[activeIndex.load (std::memory_order_acquire)].partitionSize == bufferSize)
         return;
 
+    const int expectedFftSize = juce::nextPowerOfTwo (2 * bufferSize);
+
+    if (static_cast<int> (inputHistory.size()) != expectedFftSize)
+    {
+        inputHistory.assign (static_cast<size_t> (expectedFftSize), 0.0f);
+        fftBuffer.assign (static_cast<size_t> (2 * expectedFftSize), 0.0f);
+        accumulator.assign (static_cast<size_t> (2 * expectedFftSize), 0.0f);
+    }
+
+    targetSampleRate.store (sampleRate, std::memory_order_relaxed);
+    targetBufferSize.store (bufferSize, std::memory_order_relaxed);
+    preparePending.store (true, std::memory_order_release);
+
+    if (prepareThread == nullptr)
+    {
+        prepareThread = std::make_unique<PrepareThread> (*this);
+        prepareThread->startThread();
+    }
+}
+
+bool ConvolutionProcessor::buildPendingPreparation()
+{
+    if (!preparePending.exchange (false, std::memory_order_acquire))
+        return false;
+
+    const double sampleRate = targetSampleRate.load (std::memory_order_relaxed);
+    const int bufferSize = targetBufferSize.load (std::memory_order_relaxed);
+
+    if (!hasImpulseResponse_.load (std::memory_order_acquire) || impulseResponse.empty()
+        || bufferSize <= 0 || sampleRate <= 0.0)
+        return false;
+
+    const int inactive = 1 - activeIndex.load (std::memory_order_relaxed);
+
+    auto& target = prepared[inactive];
+    target = PreparedPartitions {};
+
+    buildInto (target, sampleRate, bufferSize);
+
+    activeIndex.store (inactive, std::memory_order_release);
+    prepareReady.store (true, std::memory_order_release);
+
+    return true;
+}
+
+void ConvolutionProcessor::buildInto (PreparedPartitions& target, double sampleRate, int bufferSize) noexcept
+{
     std::vector<float> ir = impulseResponse;
 
     if (!juce::approximatelyEqual (impulseResponseSampleRate, sampleRate))
@@ -89,94 +131,53 @@ void ConvolutionProcessor::buildPartitions (double sampleRate, int bufferSize) n
         ir = std::move (resampled);
     }
 
-    processedImpulseResponse = ir;
+    target.processedImpulseResponse = ir;
 
-    partitionSize = bufferSize;
-    fftSize = juce::nextPowerOfTwo (2 * partitionSize);
-    numPartitions = static_cast<int> ((ir.size() + static_cast<size_t> (partitionSize) - 1) / static_cast<size_t> (partitionSize));
+    target.partitionSize = bufferSize;
+    target.fftSize = juce::nextPowerOfTwo (2 * bufferSize);
+    target.numPartitions = static_cast<int> ((ir.size() + static_cast<size_t> (bufferSize) - 1) / static_cast<size_t> (bufferSize));
 
-    const auto order = juce::findHighestSetBit (static_cast<uint32_t> (fftSize));
+    const auto order = juce::findHighestSetBit (static_cast<uint32_t> (target.fftSize));
 
-    fft = std::make_unique<juce::dsp::FFT> (order);
+    target.fft = std::make_unique<juce::dsp::FFT> (order);
 
-    irSpectra.assign (static_cast<size_t> (numPartitions) * 2 * static_cast<size_t> (fftSize), 0.0f);
-    fftBuffer.assign (static_cast<size_t> (2 * fftSize), 0.0f);
-    inputHistory.assign (static_cast<size_t> (fftSize), 0.0f);
-    accumulator.assign (static_cast<size_t> (2 * fftSize), 0.0f);
+    target.irSpectra.assign (static_cast<size_t> (target.numPartitions) * 2 * static_cast<size_t> (target.fftSize), 0.0f);
 
-    for (auto& history : channelHistories)
-        history.assign (ir.size() + static_cast<size_t> (partitionSize), 0.0f);
+    std::vector<float> workBuffer (static_cast<size_t> (2 * target.fftSize), 0.0f);
 
-    for (int partition = 0; partition < numPartitions; ++partition)
+    for (int partition = 0; partition < target.numPartitions; ++partition)
     {
-        std::fill (fftBuffer.begin(), fftBuffer.end(), 0.0f);
+        std::fill (workBuffer.begin(), workBuffer.end(), 0.0f);
 
-        const auto offset = static_cast<size_t> (partition) * static_cast<size_t> (partitionSize);
-        const auto count = std::min (ir.size() - offset, static_cast<size_t> (partitionSize));
-        std::copy_n (ir.data() + offset, count, fftBuffer.begin());
+        const auto offset = static_cast<size_t> (partition) * static_cast<size_t> (bufferSize);
+        const auto count = std::min (ir.size() - offset, static_cast<size_t> (bufferSize));
+        std::copy_n (ir.data() + offset, count, workBuffer.begin());
 
-        fft->performRealOnlyForwardTransform (fftBuffer.data());
+        target.fft->performRealOnlyForwardTransform (workBuffer.data());
 
-        std::copy (fftBuffer.begin(), fftBuffer.end(),
-                   irSpectra.begin() + static_cast<ptrdiff_t> (static_cast<size_t> (partition) * 2 * static_cast<size_t> (fftSize)));
-    }
-
-    partitionsReady = true;
-}
-
-void ConvolutionProcessor::updateChannelHistories (const float* const* channels, int numChannelsIn, int numSamples) noexcept
-{
-    const auto irLength = processedImpulseResponse.size();
-
-    if (irLength == 0)
-        return;
-
-    const auto historyLength = irLength + static_cast<size_t> (numSamples) - 1;
-
-    for (int channel = 0; channel < numChannelsIn; ++channel)
-    {
-        if (channels[channel] == nullptr)
-            continue;
-
-        auto& history = channelHistories[channel];
-
-        if (history.size() < historyLength)
-            history.assign (historyLength, 0.0f);
-
-        std::memmove (history.data(), history.data() + numSamples, (historyLength - static_cast<size_t> (numSamples)) * sizeof (float));
-        std::memcpy (history.data() + (historyLength - static_cast<size_t> (numSamples)), channels[channel], static_cast<size_t> (numSamples) * sizeof (float));
+        std::copy (workBuffer.begin(), workBuffer.end(),
+                   target.irSpectra.begin() + static_cast<ptrdiff_t> (static_cast<size_t> (partition) * 2 * static_cast<size_t> (target.fftSize)));
     }
 }
 
-void ConvolutionProcessor::processWithDirectConvolution (float* const* channels, int numChannelsIn, int numSamples) noexcept
+void ConvolutionProcessor::PrepareThread::run()
 {
-    const auto& ir = processedImpulseResponse;
-
-    if (ir.empty())
-        return;
-
-    updateChannelHistories (channels, numChannelsIn, numSamples);
-
-    const int irLength = static_cast<int> (ir.size());
-
-    for (int channel = 0; channel < numChannelsIn; ++channel)
+    while (!threadShouldExit())
     {
-        if (channels[channel] == nullptr)
+        if (owner.buildPendingPreparation())
             continue;
 
-        const auto& history = channelHistories[channel];
-        const auto historyStart = history.size() - static_cast<size_t> (numSamples);
-
-        for (int n = 0; n < numSamples; ++n)
-        {
-            float accumulated = 0.0f;
-
-            for (int k = 0; k < irLength; ++k)
-                accumulated += ir[static_cast<size_t> (k)] * history[historyStart + static_cast<size_t> (n - k)];
-
-            channels[channel][n] = accumulated;
-        }
+        juce::Thread::sleep (5);
     }
+}
+
+void ConvolutionProcessor::reset() noexcept
+{
+    std::fill (inputHistory.begin(), inputHistory.end(), 0.0f);
+    std::fill (fftBuffer.begin(), fftBuffer.end(), 0.0f);
+    std::fill (accumulator.begin(), accumulator.end(), 0.0f);
+
+    numChannels = 0;
 }
 
 void ConvolutionProcessor::process (float* const* channels, int numChannelsIn, int numSamples) noexcept
@@ -186,13 +187,17 @@ void ConvolutionProcessor::process (float* const* channels, int numChannelsIn, i
 
     numChannels = numChannelsIn;
 
-    if (!partitionsReady || numSamples != partitionSize)
-    {
-        processWithDirectConvolution (channels, numChannelsIn, numSamples);
+    if (!prepareReady.load (std::memory_order_acquire))
         return;
-    }
 
-    updateChannelHistories (channels, numChannelsIn, numSamples);
+    const auto& active = prepared[activeIndex.load (std::memory_order_acquire)];
+
+    if (active.fft == nullptr || active.irSpectra.empty() || numSamples != active.partitionSize)
+        return;
+
+    const int partitionSize = active.partitionSize;
+    const int fftSize = active.fftSize;
+    const int numPartitions = active.numPartitions;
 
     for (int channel = 0; channel < numChannelsIn; ++channel)
     {
@@ -207,7 +212,7 @@ void ConvolutionProcessor::process (float* const* channels, int numChannelsIn, i
         std::fill (fftBuffer.begin() + fftSize, fftBuffer.end(), 0.0f);
         std::copy (inputHistory.begin(), inputHistory.end(), fftBuffer.begin());
 
-        fft->performRealOnlyForwardTransform (fftBuffer.data());
+        active.fft->performRealOnlyForwardTransform (fftBuffer.data());
 
         std::fill (accumulator.begin(), accumulator.end(), 0.0f);
 
@@ -215,7 +220,7 @@ void ConvolutionProcessor::process (float* const* channels, int numChannelsIn, i
 
         for (int partition = 0; partition < numPartitions; ++partition)
         {
-            const auto* irPartition = irSpectra.data() + static_cast<size_t> (partition) * 2 * static_cast<size_t> (fftSize);
+            const auto* irPartition = active.irSpectra.data() + static_cast<size_t> (partition) * 2 * static_cast<size_t> (fftSize);
 
             for (int bin = 0; bin < fftSize; ++bin)
             {
@@ -233,7 +238,7 @@ void ConvolutionProcessor::process (float* const* channels, int numChannelsIn, i
 
         std::copy (accumulator.begin(), accumulator.end(), fftBuffer.begin());
 
-        fft->performRealOnlyInverseTransform (fftBuffer.data());
+        active.fft->performRealOnlyInverseTransform (fftBuffer.data());
 
         std::memcpy (channels[channel], fftBuffer.data() + (fftSize - partitionSize),
                      static_cast<size_t> (partitionSize) * sizeof (float));

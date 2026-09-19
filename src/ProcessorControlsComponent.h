@@ -166,6 +166,7 @@ private:
         juce::TextButton editorButton;
         juce::TextEditor statusText;
         juce::Component parameterPanel;
+        juce::ThreadPool scanPool;
         std::vector<juce::Slider*> parameterSliders;
         std::vector<juce::Label*> parameterLabels;
         std::vector<juce::PluginDescription> scannedPlugins;
