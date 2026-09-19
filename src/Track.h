@@ -114,6 +114,7 @@ public:
     juce::String loadVst3Plugin (const juce::PluginDescription& description, double sampleRate, int bufferSize);
     void unloadVst3Plugin() noexcept;
     bool isVst3PluginLoaded() const noexcept;
+    bool isVst3PluginFailed() const noexcept;
     juce::String getVst3PluginName() const noexcept;
     juce::PluginDescription getVst3PluginDescription() const noexcept;
     void setVst3PluginBypassed (bool shouldBeBypassed) noexcept;

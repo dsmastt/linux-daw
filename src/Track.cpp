@@ -364,6 +364,11 @@ bool Track::isVst3PluginLoaded() const noexcept
     return vst3Processor != nullptr && vst3Processor->isLoaded();
 }
 
+bool Track::isVst3PluginFailed() const noexcept
+{
+    return vst3Processor != nullptr && vst3Processor->hasFailed();
+}
+
 juce::String Track::getVst3PluginName() const noexcept
 {
     return vst3Processor != nullptr ? vst3Processor->getPluginName() : juce::String();

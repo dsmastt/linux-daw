@@ -35,6 +35,7 @@ void Vst3HostProcessor::unloadPlugin() noexcept
 {
     loaded.store (false, std::memory_order_release);
     bypassed.store (false, std::memory_order_relaxed);
+    failed.store (false, std::memory_order_relaxed);
     instance.reset();
     pluginName.clear();
 }
@@ -59,23 +60,37 @@ void Vst3HostProcessor::reset() noexcept
 
 void Vst3HostProcessor::process (float* const* channels, int numChannels, int numSamples) noexcept
 {
-    if (!loaded.load() || instance == nullptr || bypassed.load())
+    if (!loaded.load() || instance == nullptr || bypassed.load() || failed.load())
         return;
 
     pluginBuffer.setDataToReferTo (channels, numChannels, numSamples);
     midiBuffer.clear();
 
-    instance->processBlock (pluginBuffer, midiBuffer);
+    try
+    {
+        instance->processBlock (pluginBuffer, midiBuffer);
+    }
+    catch (...)
+    {
+        failed.store (true, std::memory_order_release);
+    }
 }
 
 void Vst3HostProcessor::processWithMidi (float* const* channels, int numChannels, int numSamples, juce::MidiBuffer& midiEvents) noexcept
 {
-    if (!loaded.load() || instance == nullptr || bypassed.load())
+    if (!loaded.load() || instance == nullptr || bypassed.load() || failed.load())
         return;
 
     pluginBuffer.setDataToReferTo (channels, numChannels, numSamples);
 
-    instance->processBlock (pluginBuffer, midiEvents);
+    try
+    {
+        instance->processBlock (pluginBuffer, midiEvents);
+    }
+    catch (...)
+    {
+        failed.store (true, std::memory_order_release);
+    }
 }
 
 std::vector<juce::PluginDescription> scanVst3Plugins (const juce::StringArray& paths)

@@ -327,6 +327,8 @@ void MainComponent::updateStatus()
 {
     if (!engine.isRunning())
     {
+        startButton.setEnabled (true);
+        stopButton.setEnabled (false);
         statusLabel.setText ("Stopped", juce::dontSendNotification);
         return;
     }

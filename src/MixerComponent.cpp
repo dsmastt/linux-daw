@@ -164,6 +164,12 @@ void ChannelStripComponent::mouseDown (const juce::MouseEvent& event)
 
 void ChannelStripComponent::refreshPluginStatus()
 {
+    if (track.isVst3PluginFailed())
+    {
+        pluginStatus.setText ("plugin failed\nremove to continue", juce::dontSendNotification);
+        return;
+    }
+
     const auto pluginName = track.getVst3PluginName();
 
     if (pluginName.isEmpty())

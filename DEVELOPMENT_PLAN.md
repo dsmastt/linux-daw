@@ -1235,6 +1235,8 @@ Optimize real-time audio path
 
 ## Milestone 38 - Error Handling
 
+**Status:** Completed
+
 Handle:
 
 * device disappearance
@@ -1379,11 +1381,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 38 - Error Handling
+## Milestone 39 - Automated Tests
 
-Latency optimization is measured: FFTW-accelerated DSP, per-processor profiling, and thread scheduling reporting are in place.
+Error handling works: device loss, invalid configurations, plugin failures, corrupted project files, and missing audio files fail gracefully instead of taking the session down.
 
-The next task is to handle error cases gracefully: device disappearance, device changes, invalid configurations, plugin failures, corrupted project files, and missing audio files.
+The next task is to create automated tests for DSP algorithms, parameter handling, project serialization, clip manipulation, transport, routing, and audio processing correctness.
 
 Do not skip ahead.
 
