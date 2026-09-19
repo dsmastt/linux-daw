@@ -11,6 +11,7 @@ namespace daw
 {
 class GainProcessor;
 class NoiseGateProcessor;
+class ParametricEqProcessor;
 
 class AudioEngine final : public juce::AudioIODeviceCallback
 {
@@ -34,6 +35,9 @@ public:
     float getGateAttackMs() const noexcept;
     void setGateReleaseMs (float releaseMs) noexcept;
     float getGateReleaseMs() const noexcept;
+
+    void setEqBandParameters (int band, double frequencyHz, float gainDb, float q) noexcept;
+    int getNumEqBands() const noexcept;
 
     int getNumProcessors() const noexcept { return processorChain.size(); }
 
@@ -79,5 +83,6 @@ private:
     ProcessorChain processorChain;
     GainProcessor* gainProcessor = nullptr;
     NoiseGateProcessor* gateProcessor = nullptr;
+    ParametricEqProcessor* eqProcessor = nullptr;
 };
 } // namespace daw

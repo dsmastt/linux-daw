@@ -5,6 +5,7 @@
 
 #include "GainProcessor.h"
 #include "NoiseGateProcessor.h"
+#include "ParametricEqProcessor.h"
 
 namespace daw
 {
@@ -29,6 +30,10 @@ AudioEngine::AudioEngine()
     auto gate = std::make_unique<NoiseGateProcessor>();
     gateProcessor = gate.get();
     processorChain.append (std::move (gate));
+
+    auto eq = std::make_unique<ParametricEqProcessor>();
+    eqProcessor = eq.get();
+    processorChain.append (std::move (eq));
 }
 
 AudioEngine::~AudioEngine()
@@ -78,6 +83,17 @@ void AudioEngine::setGateReleaseMs (float releaseMs) noexcept
 float AudioEngine::getGateReleaseMs() const noexcept
 {
     return gateProcessor != nullptr ? gateProcessor->getReleaseMs() : 100.0f;
+}
+
+void AudioEngine::setEqBandParameters (int band, double frequencyHz, float gainDb, float q) noexcept
+{
+    if (eqProcessor != nullptr)
+        eqProcessor->setBandParameters (band, frequencyHz, gainDb, q);
+}
+
+int AudioEngine::getNumEqBands() const noexcept
+{
+    return ParametricEqProcessor::maxBands;
 }
 
 juce::String AudioEngine::start (const juce::String& inputDeviceName,

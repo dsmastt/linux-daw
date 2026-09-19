@@ -108,6 +108,11 @@ int runAudioEngine (const juce::ArgumentList& args)
     if (const auto value = args.getValueForOption ("--gate-release-ms"); value.isNotEmpty())
         gateReleaseMs = value.getFloatValue();
 
+    juce::StringArray eqBandSpecs;
+
+    if (const auto value = args.getValueForOption ("--eq"); value.isNotEmpty())
+        eqBandSpecs = juce::StringArray::fromTokens (value, ",", "\"");
+
     std::cout << "Input device:  " << inputDeviceName << std::endl;
     std::cout << "Output device: " << outputDeviceName << std::endl;
     std::cout << "Requested sample rate: " << static_cast<int> (sampleRate) << std::endl;
@@ -122,6 +127,21 @@ int runAudioEngine (const juce::ArgumentList& args)
     engine.setGateThresholdDb (gateThresholdDb);
     engine.setGateAttackMs (gateAttackMs);
     engine.setGateReleaseMs (gateReleaseMs);
+
+    for (int band = 0; band < eqBandSpecs.size() && band < engine.getNumEqBands(); ++band)
+    {
+        const auto parts = juce::StringArray::fromTokens (eqBandSpecs[band], ":", "\"");
+
+        if (parts.size() >= 3)
+            engine.setEqBandParameters (band,
+                                        parts[0].getDoubleValue(),
+                                        parts[1].getFloatValue(),
+                                        parts[2].getFloatValue());
+    }
+
+    for (int band = 0; band < engine.getNumEqBands(); ++band)
+        if (const auto spec = band < eqBandSpecs.size() ? eqBandSpecs[band] : juce::String(); spec.isNotEmpty())
+            std::cout << "EQ band " << band + 1 << ": " << spec << std::endl;
 
     const auto error = engine.start (inputDeviceName, outputDeviceName, sampleRate, bufferSize);
 

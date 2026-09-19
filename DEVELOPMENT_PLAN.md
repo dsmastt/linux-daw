@@ -413,6 +413,8 @@ Add noise gate
 
 ## Milestone 10 - EQ
 
+**Status:** Completed
+
 Add a basic parametric or multi-band EQ.
 
 ### Requirements
@@ -1323,11 +1325,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 10 - EQ
+## Milestone 11 - Compressor
 
-The noise gate works as the second chain element with threshold, attack, and release parameters.
+The parametric EQ works as the third chain element with per-band frequency, gain, and Q.
 
-The next task is to add a multi-band parametric EQ with frequency, gain, and Q per band.
+The next task is to add a real-time compressor with threshold, ratio, attack, release, and makeup gain.
 
 Do not skip ahead.
 
