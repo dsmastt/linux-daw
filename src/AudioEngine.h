@@ -22,6 +22,8 @@ public:
     bool isRunning() const noexcept { return running.load(); }
     double getSampleRate() const noexcept { return sampleRate.load(); }
     int getBufferSize() const noexcept { return bufferSize.load(); }
+    int getInputLatencySamples() const noexcept { return inputLatencySamples.load(); }
+    int getOutputLatencySamples() const noexcept { return outputLatencySamples.load(); }
 
 private:
     void audioDeviceIOCallbackWithContext (const float* const* inputChannelData,
@@ -38,5 +40,7 @@ private:
     std::atomic<bool> running { false };
     std::atomic<double> sampleRate { 0.0 };
     std::atomic<int> bufferSize { 0 };
+    std::atomic<int> inputLatencySamples { 0 };
+    std::atomic<int> outputLatencySamples { 0 };
 };
 } // namespace daw

@@ -8,32 +8,53 @@
 
 namespace
 {
-juce::String findAI04Device (juce::AudioIODeviceType& type, bool wantInput)
+juce::AudioIODeviceType* findAlsaType (juce::OwnedArray<juce::AudioIODeviceType>& types)
+{
+    for (auto* type : types)
+        if (type->getTypeName() == "ALSA")
+            return type;
+
+    return nullptr;
+}
+
+juce::String resolveDeviceName (juce::AudioIODeviceType& type,
+                                const juce::String& requested,
+                                bool wantInput)
 {
     type.scanForDevices();
+    const auto names = type.getDeviceNames (wantInput);
 
-    for (const auto& name : type.getDeviceNames (wantInput))
-        if (name.contains ("AI-04") && name.contains ("Front output / input"))
+    if (requested.isEmpty())
+    {
+        for (const auto& name : names)
+            if (name.contains ("AI-04") && name.contains ("Front output / input"))
+                return name;
+
+        for (const auto& name : names)
+            if (name.contains ("AI-04"))
+                return name;
+
+        return {};
+    }
+
+    for (const auto& name : names)
+        if (name.equalsIgnoreCase (requested))
             return name;
 
-    for (const auto& name : type.getDeviceNames (wantInput))
-        if (name.contains ("AI-04"))
+    for (const auto& name : names)
+        if (name.containsIgnoreCase (requested))
             return name;
 
     return {};
 }
 
-int runAudioEngine()
+int runAudioEngine (const juce::ArgumentList& args)
 {
     juce::AudioDeviceManager deviceManager;
     juce::OwnedArray<juce::AudioIODeviceType> types;
     deviceManager.createAudioDeviceTypes (types);
 
-    juce::AudioIODeviceType* alsaType = nullptr;
-
-    for (auto* type : types)
-        if (type->getTypeName() == "ALSA")
-            alsaType = type;
+    auto* alsaType = findAlsaType (types);
 
     if (alsaType == nullptr)
     {
@@ -41,21 +62,39 @@ int runAudioEngine()
         return 1;
     }
 
-    const auto inputDeviceName  = findAI04Device (*alsaType, true);
-    const auto outputDeviceName = findAI04Device (*alsaType, false);
+    const auto inputDeviceName  = resolveDeviceName (*alsaType, args.getValueForOption ("--input-device"), true);
+    const auto outputDeviceName = resolveDeviceName (*alsaType, args.getValueForOption ("--output-device"), false);
 
     if (inputDeviceName.isEmpty() || outputDeviceName.isEmpty())
     {
-        std::cout << "AI-04 device not found." << std::endl;
+        std::cout << "Requested audio device not found." << std::endl;
+        std::cout << "Use --list-devices to see the available devices." << std::endl;
         return 1;
     }
 
+    double sampleRate = 48000.0;
+
+    if (const auto value = args.getValueForOption ("--sample-rate"); value.isNotEmpty())
+        sampleRate = value.getDoubleValue();
+
+    int bufferSize = 128;
+
+    if (const auto value = args.getValueForOption ("--buffer-size"); value.isNotEmpty())
+        bufferSize = value.getIntValue();
+
+    double durationSeconds = 0.0;
+
+    if (const auto value = args.getValueForOption ("--duration"); value.isNotEmpty())
+        durationSeconds = value.getDoubleValue();
+
     std::cout << "Input device:  " << inputDeviceName << std::endl;
     std::cout << "Output device: " << outputDeviceName << std::endl;
+    std::cout << "Requested sample rate: " << static_cast<int> (sampleRate) << std::endl;
+    std::cout << "Requested buffer size: " << bufferSize << std::endl;
 
     daw::AudioEngine engine;
 
-    const auto error = engine.start (inputDeviceName, outputDeviceName, 48000.0, 128);
+    const auto error = engine.start (inputDeviceName, outputDeviceName, sampleRate, bufferSize);
 
     if (error.isNotEmpty())
     {
@@ -63,13 +102,27 @@ int runAudioEngine()
         return 1;
     }
 
+    const auto totalLatencySamples = engine.getInputLatencySamples() + engine.getOutputLatencySamples();
+    const auto latencyMs = (1000.0 * totalLatencySamples) / engine.getSampleRate();
+
     std::cout << "Audio running: sample rate " << engine.getSampleRate()
               << ", buffer size " << engine.getBufferSize() << std::endl;
+    std::cout << "Latency: " << engine.getInputLatencySamples() << " in + "
+              << engine.getOutputLatencySamples() << " out samples = " << latencyMs << " ms" << std::endl;
 
-    juce::Thread::sleep (3000);
+    if (durationSeconds > 0.0)
+    {
+        juce::Thread::sleep (static_cast<int> (durationSeconds * 1000));
+        engine.stop();
+        std::cout << "Audio stopped." << std::endl;
+    }
+    else
+    {
+        std::cout << "Passthrough running. Press Ctrl+C to stop." << std::endl;
 
-    engine.stop();
-    std::cout << "Audio stopped." << std::endl;
+        while (engine.isRunning())
+            juce::Thread::sleep (200);
+    }
 
     return 0;
 }
@@ -97,10 +150,10 @@ int main (int argc, char* argv[])
                              "",
                              "Starts the application",
                              "",
-                             [&exitCode] (const juce::ArgumentList&)
+                             [&exitCode] (const juce::ArgumentList& args)
                              {
                                  std::cout << "Application started." << std::endl;
-                                 exitCode = runAudioEngine();
+                                 exitCode = runAudioEngine (args);
                              }});
 
     const auto result = app.findAndRunCommand (argc, argv);

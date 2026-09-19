@@ -168,6 +168,8 @@ Add audio device discovery
 
 ## Milestone 4 - Create AudioEngine
 
+**Status:** Completed
+
 ### Goal
 
 Create a dedicated audio engine abstraction.
@@ -212,6 +214,8 @@ Add audio engine
 # 5. Audio Passthrough
 
 ## Milestone 5 - Input to Output
+
+**Status:** Completed
 
 ### Goal
 
@@ -1311,11 +1315,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 4 - Create AudioEngine
+## Milestone 6 - Audio Debugging Tools
 
-Audio device discovery works and identifies the AI-04.
+Passthrough works: input reaches output on the AI-04 with selectable device, sample rate, and buffer size.
 
-The next task is to create a dedicated `AudioEngine` abstraction that can open a device, configure sample rate and buffer size, and start/stop audio with an empty callback.
+The next task is to make audio behavior observable: sample rate, buffer size, channel counts, callback timing, xruns, and CPU usage, with an optional debug mode that does not print from the audio thread.
 
 Do not skip ahead.
 

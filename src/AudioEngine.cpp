@@ -1,5 +1,7 @@
 #include "AudioEngine.h"
 
+#include <algorithm>
+
 namespace daw
 {
 AudioEngine::~AudioEngine()
@@ -41,16 +43,24 @@ void AudioEngine::stop()
     running.store (false);
     sampleRate.store (0.0);
     bufferSize.store (0);
+    inputLatencySamples.store (0);
+    outputLatencySamples.store (0);
 }
 
-void AudioEngine::audioDeviceIOCallbackWithContext (const float* const*,
-                                                    int,
+void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputChannelData,
+                                                    int numInputChannels,
                                                     float* const* outputChannelData,
                                                     int numOutputChannels,
                                                     int numSamples,
                                                     const juce::AudioIODeviceCallbackContext&)
 {
-    for (int i = 0; i < numOutputChannels; ++i)
+    const int channelsToCopy = std::min (numInputChannels, numOutputChannels);
+
+    for (int i = 0; i < channelsToCopy; ++i)
+        if (inputChannelData[i] != nullptr && outputChannelData[i] != nullptr)
+            juce::FloatVectorOperations::copy (outputChannelData[i], inputChannelData[i], numSamples);
+
+    for (int i = channelsToCopy; i < numOutputChannels; ++i)
         if (outputChannelData[i] != nullptr)
             juce::FloatVectorOperations::clear (outputChannelData[i], numSamples);
 }
@@ -59,6 +69,8 @@ void AudioEngine::audioDeviceAboutToStart (juce::AudioIODevice* device)
 {
     sampleRate.store (device->getCurrentSampleRate());
     bufferSize.store (device->getCurrentBufferSizeSamples());
+    inputLatencySamples.store (device->getInputLatencyInSamples());
+    outputLatencySamples.store (device->getOutputLatencyInSamples());
 }
 
 void AudioEngine::audioDeviceStopped()
