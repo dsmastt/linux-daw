@@ -2,19 +2,10 @@
 
 #include <chrono>
 
+#include "AtomicHelpers.h"
+
 namespace daw
 {
-namespace
-{
-void updateMax (std::atomic<double>& target, double value)
-{
-    auto current = target.load (std::memory_order_relaxed);
-
-    while (value > current && !target.compare_exchange_weak (current, value, std::memory_order_relaxed))
-    {
-    }
-}
-} // namespace
 
 void ProcessorChain::append (std::unique_ptr<AudioProcessor> processor)
 {
@@ -70,7 +61,7 @@ void ProcessorChain::process (float* const* channels, int numChannels, int numSa
         if (i < static_cast<size_t> (measuredCount))
         {
             processorTotalTimeMs[i].fetch_add (elapsedMs, std::memory_order_relaxed);
-            updateMax (processorMaxTimeMs[i], elapsedMs);
+            updateAtomicMax (processorMaxTimeMs[i], elapsedMs);
         }
     }
 }
@@ -88,7 +79,7 @@ void ProcessorChain::processWithMidi (float* const* channels, int numChannels, i
         if (i < static_cast<size_t> (measuredCount))
         {
             processorTotalTimeMs[i].fetch_add (elapsedMs, std::memory_order_relaxed);
-            updateMax (processorMaxTimeMs[i], elapsedMs);
+            updateAtomicMax (processorMaxTimeMs[i], elapsedMs);
         }
     }
 }

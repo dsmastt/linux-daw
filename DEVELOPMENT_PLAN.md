@@ -1261,6 +1261,8 @@ Improve audio and project error handling
 
 ## Milestone 39 - Automated Tests
 
+**Status:** Completed
+
 Create tests for:
 
 * DSP algorithms
@@ -1282,6 +1284,8 @@ Add automated tests
 # 34. Final Architecture Cleanup
 
 ## Milestone 40 - Architecture Review
+
+**Status:** Completed
 
 Review the entire application.
 
@@ -1381,11 +1385,11 @@ These should only be added after the core architecture is stable.
 
 # Current Milestone
 
-## Milestone 39 - Automated Tests
+## Milestone 41 - Packaging
 
-Error handling works: device loss, invalid configurations, plugin failures, corrupted project files, and missing audio files fail gracefully instead of taking the session down.
+The architecture review is complete: duplicated helpers were consolidated, ownership and coupling verified, and all tests pass.
 
-The next task is to create automated tests for DSP algorithms, parameter handling, project serialization, clip manipulation, transport, routing, and audio processing correctness.
+The next task is to create a reproducible Linux build: release build, debug build, installation, desktop launcher, application icon, and user data directory.
 
 Do not skip ahead.
 

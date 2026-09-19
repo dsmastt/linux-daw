@@ -3,20 +3,10 @@
 #include <algorithm>
 #include <chrono>
 
+#include "AtomicHelpers.h"
+
 namespace daw
 {
-namespace
-{
-template <typename ValueType>
-void updateMax (std::atomic<ValueType>& target, ValueType value)
-{
-    auto current = target.load (std::memory_order_relaxed);
-
-    while (value > current && !target.compare_exchange_weak (current, value, std::memory_order_relaxed))
-    {
-    }
-}
-} // namespace
 
 AudioEngine::~AudioEngine()
 {
@@ -113,7 +103,7 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
             inputPeakThisBlock = std::max (inputPeakThisBlock,
                                            juce::FloatVectorOperations::findMinAndMax (inputChannelData[i], numSamples).getEnd());
 
-    updateMax (inputPeak, inputPeakThisBlock);
+    updateAtomicMax (inputPeak, inputPeakThisBlock);
 
     midiBuffer.clear();
     midiHandler.drainInto (midiBuffer);
@@ -127,7 +117,7 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
             outputPeakThisBlock = std::max (outputPeakThisBlock,
                                             juce::FloatVectorOperations::findMinAndMax (outputChannelData[i], numSamples).getEnd());
 
-    updateMax (outputPeak, outputPeakThisBlock);
+    updateAtomicMax (outputPeak, outputPeakThisBlock);
 
     if (outputPeakThisBlock >= 0.999f)
         clipCounter.fetch_add (1, std::memory_order_relaxed);
@@ -136,7 +126,7 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
 
     numCallbacks.fetch_add (1, std::memory_order_relaxed);
     totalCallbackTimeMs.fetch_add (elapsedMs, std::memory_order_relaxed);
-    updateMax (maxCallbackTimeMs, elapsedMs);
+    updateAtomicMax (maxCallbackTimeMs, elapsedMs);
 
     if (++callbacksSinceXRunCheck >= 128)
     {
