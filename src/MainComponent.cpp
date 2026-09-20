@@ -2,6 +2,8 @@
 
 #include <pthread.h>
 
+#include "DarkLookAndFeel.h"
+
 namespace daw
 {
 namespace
@@ -126,8 +128,8 @@ MainComponent::MainComponent()
     statusLabel.setMultiLine (true, false);
     statusLabel.setReadOnly (true);
     statusLabel.setCaretVisible (false);
-    statusLabel.setColour (juce::TextEditor::backgroundColourId, juce::Colours::black);
-    statusLabel.setColour (juce::TextEditor::textColourId, juce::Colours::lightgreen);
+    statusLabel.setColour (juce::TextEditor::backgroundColourId, DarkLookAndFeel::basePanel());
+    statusLabel.setColour (juce::TextEditor::textColourId, DarkLookAndFeel::accent());
     addAndMakeVisible (statusLabel);
 
     refreshDevices();

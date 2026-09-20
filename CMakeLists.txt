@@ -62,6 +62,7 @@ juce_add_gui_app(linux-daw
 target_sources(linux-daw PRIVATE
     src/main.cpp
     src/AutomationComponent.cpp
+    src/DarkLookAndFeel.cpp
     src/MainComponent.cpp
     src/MainWindow.cpp
     src/MeterComponent.cpp

@@ -10,11 +10,13 @@ ProcessorControlsComponent::SliderRow::SliderRow (const juce::String& name,
                                                   std::function<void (double)> onChange)
 {
     label.setText (name, juce::dontSendNotification);
+    label.setJustificationType (juce::Justification::centred);
     addAndMakeVisible (label);
 
+    slider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
+    slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 64, 20);
     slider.setRange (minValue, maxValue, step);
     slider.setValue (initialValue, juce::dontSendNotification);
-    slider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 64, 22);
     slider.onValueChange = [slider = &slider, onChange = std::move (onChange)]
     {
         onChange (slider->getValue());
@@ -28,7 +30,8 @@ ProcessorControlsComponent::SliderRow::~SliderRow() = default;
 void ProcessorControlsComponent::SliderRow::resized()
 {
     auto bounds = getLocalBounds();
-    label.setBounds (bounds.removeFromLeft (120));
+
+    label.setBounds (bounds.removeFromTop (18));
     slider.setBounds (bounds);
 }
 
@@ -129,8 +132,8 @@ void ProcessorControlsComponent::EqTab::resized()
 
         for (int rowIndex = 0; rowIndex < 3 && (band * 3 + rowIndex) < static_cast<int> (rows.size()); ++rowIndex)
         {
-            rows[static_cast<size_t> (band * 3 + rowIndex)]->setBounds (column.removeFromTop (38));
-            column.removeFromTop (2);
+            rows[static_cast<size_t> (band * 3 + rowIndex)]->setBounds (column.removeFromTop (72));
+            column.removeFromTop (4);
         }
     }
 }
@@ -202,7 +205,7 @@ void ProcessorControlsComponent::DistortionTab::resized()
 
     for (const auto& row : rows)
     {
-        row->setBounds (bounds.removeFromTop (54));
+        row->setBounds (bounds.removeFromTop (88));
         bounds.removeFromTop (4);
     }
 
@@ -379,7 +382,7 @@ void ProcessorControlsComponent::layoutRows (juce::Component& parent, const std:
 
     for (const auto& row : rows)
     {
-        row->setBounds (bounds.removeFromTop (54));
+        row->setBounds (bounds.removeFromTop (88));
         bounds.removeFromTop (4);
     }
 }

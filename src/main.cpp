@@ -1,5 +1,6 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "DarkLookAndFeel.h"
 #include "MainWindow.h"
 
 namespace
@@ -16,6 +17,7 @@ public:
     void initialise (const juce::String& commandLine) override
     {
         juce::ignoreUnused (commandLine);
+        juce::LookAndFeel::setDefaultLookAndFeel (&darkLookAndFeel);
         content = std::make_unique<daw::MainComponent>();
         mainWindow = std::make_unique<daw::MainWindow> (*content);
     }
@@ -24,6 +26,7 @@ public:
     {
         mainWindow.reset();
         content.reset();
+        juce::LookAndFeel::setDefaultLookAndFeel (nullptr);
     }
 
     void systemRequestedQuit() override
@@ -37,6 +40,7 @@ public:
     }
 
 private:
+    daw::DarkLookAndFeel darkLookAndFeel;
     std::unique_ptr<daw::MainComponent> content;
     std::unique_ptr<daw::MainWindow> mainWindow;
 };
