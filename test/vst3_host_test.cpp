@@ -223,7 +223,10 @@ int runTest (const juce::ArgumentList& args)
     if (const auto value = args.getValueForOption ("--plugin-path"); value.isNotEmpty())
         paths.add (value);
     else
+    {
         paths.add ("build/linux-daw-test-plugin_artefacts/VST3");
+        paths.add ("build/linux-daw-test-plugin_artefacts/Release/VST3");
+    }
 
     paths.add (juce::File::getSpecialLocation (juce::File::userHomeDirectory).getChildFile (".vst3").getFullPathName());
 
@@ -240,10 +243,22 @@ int runTest (const juce::ArgumentList& args)
         return 1;
     }
 
+    // Prefer the built-in test plugin, whose behaviour the checks below rely on.
+    const juce::PluginDescription* pluginToLoad = &plugins.front();
+
+    for (const auto& plugin : plugins)
+    {
+        if (plugin.name == "Linux DAW Test Plugin")
+        {
+            pluginToLoad = &plugin;
+            break;
+        }
+    }
+
     daw::AudioEngine engine;
     auto& graph = engine.getAudioGraph();
 
-    const auto loadError = graph.loadVst3Plugin (plugins.front(), 48000.0, 128);
+    const auto loadError = graph.loadVst3Plugin (*pluginToLoad, 48000.0, 128);
 
     if (loadError.isNotEmpty())
     {

@@ -35,6 +35,7 @@ private:
 
     double sampleRate = 0.0;
     float toneState[maxChannels] = {};
-    float dcState[maxChannels] = {};
+    float dcInputState[maxChannels] = {};
+    float dcOutputState[maxChannels] = {};
 };
 } // namespace daw

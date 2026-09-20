@@ -45,7 +45,8 @@ void DistortionProcessor::reset() noexcept
     for (int channel = 0; channel < maxChannels; ++channel)
     {
         toneState[channel] = 0.0f;
-        dcState[channel] = 0.0f;
+        dcInputState[channel] = 0.0f;
+        dcOutputState[channel] = 0.0f;
     }
 }
 
@@ -74,24 +75,28 @@ void DistortionProcessor::process (float* const* channels, int numChannels, int 
                 continue;
 
             float lpState = toneState[channel];
-            float dcStateChannel = dcState[channel];
+            float dcInput = dcInputState[channel];
+            float dcOutput = dcOutputState[channel];
 
             for (int i = 0; i < numSamples; ++i)
             {
-                float sample = shaper (channels[channel][i] * drive);
+                const float input = channels[channel][i];
+
+                // Classic DC blocker on the input: y[n] = x[n] - x[n-1] + R * y[n-1]
+                const float dcBlocked = input - dcInput + dcCoeff * dcOutput;
+                dcInput = input;
+                dcOutput = dcBlocked;
+
+                float sample = shaper (dcBlocked * drive);
 
                 lpState += toneCoeff * (sample - lpState);
-                sample = lpState;
 
-                const float dcBlocked = sample - dcStateChannel;
-                dcStateChannel += dcCoeff * dcBlocked;
-                sample = dcBlocked;
-
-                channels[channel][i] = sample;
+                channels[channel][i] = lpState;
             }
 
             toneState[channel] = lpState;
-            dcState[channel] = dcStateChannel;
+            dcInputState[channel] = dcInput;
+            dcOutputState[channel] = dcOutput;
         }
     };
 
