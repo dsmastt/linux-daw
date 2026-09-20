@@ -15,6 +15,24 @@ FetchContent_Declare(JUCE
 
 FetchContent_MakeAvailable(JUCE)
 
+# linux-daw patch: JUCE's ALSA backend builds the combined device sample-rate
+# list as an unsorted union of input and output rates, which breaks
+# AudioDeviceManager::findNearestValue (a binary search). Sort the list.
+set(_juce_alsa_src "${juce_SOURCE_DIR}/modules/juce_audio_devices/native/juce_ALSA_linux.cpp")
+if(EXISTS "${_juce_alsa_src}")
+    file(READ "${_juce_alsa_src}" _juce_alsa_contents)
+    string(FIND "${_juce_alsa_contents}" "std::sort (sampleRates.begin(), sampleRates.end());" _juce_alsa_patched)
+
+    if(_juce_alsa_patched EQUAL -1)
+        string(REPLACE
+            "getDeviceProperties (outputId, minChansOut, maxChansOut, dummy, dummy, sampleRates, true, false);"
+            "getDeviceProperties (outputId, minChansOut, maxChansOut, dummy, dummy, sampleRates, true, false);\n        std::sort (sampleRates.begin(), sampleRates.end());"
+            _juce_alsa_contents "${_juce_alsa_contents}")
+        file(WRITE "${_juce_alsa_src}" "${_juce_alsa_contents}")
+        message(STATUS "Applied linux-daw ALSA sample-rate sort patch")
+    endif()
+endif()
+
 set(CORE_SOURCES
     src/AudioEngine.cpp
     src/AudioGraph.cpp

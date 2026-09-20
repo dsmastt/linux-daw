@@ -306,6 +306,9 @@ int runTest (const juce::ArgumentList& args)
 
     auto* alsaType = findAlsaType (types);
 
+    if (alsaType != nullptr)
+        alsaType->scanForDevices();
+
     if (alsaType == nullptr)
     {
         std::cout << "No ALSA device type found." << std::endl;
@@ -313,8 +316,19 @@ int runTest (const juce::ArgumentList& args)
         return 1;
     }
 
-    const auto inputDeviceName = resolveAI04 (*alsaType, true);
-    const auto outputDeviceName = resolveAI04 (*alsaType, false);
+    double testSampleRate = 48000.0;
+
+    if (const auto requested = args.getValueForOption ("--rate"); requested.isNotEmpty())
+        testSampleRate = requested.getDoubleValue();
+
+    auto inputDeviceName = resolveAI04 (*alsaType, true);
+    auto outputDeviceName = resolveAI04 (*alsaType, false);
+
+    if (const auto requested = args.getValueForOption ("--input-device"); requested.isNotEmpty())
+        inputDeviceName = requested;
+
+    if (const auto requested = args.getValueForOption ("--output-device"); requested.isNotEmpty())
+        outputDeviceName = requested;
 
     if (inputDeviceName.isEmpty() || outputDeviceName.isEmpty())
     {
@@ -323,7 +337,7 @@ int runTest (const juce::ArgumentList& args)
         return 1;
     }
 
-    const auto startError = engine.start (inputDeviceName, outputDeviceName, 48000.0, 128);
+    const auto startError = engine.start (inputDeviceName, outputDeviceName, testSampleRate, 128);
 
     if (startError.isNotEmpty())
     {
@@ -332,6 +346,10 @@ int runTest (const juce::ArgumentList& args)
         return 1;
     }
 
+    std::cout << "Negotiated: sample rate " << engine.getSampleRate()
+              << ", buffer " << engine.getBufferSize()
+              << ", " << engine.getNumInputChannels() << " in / "
+              << engine.getNumOutputChannels() << " out" << std::endl;
     std::cout << "Audio running with plugin in the chain..." << std::endl;
 
     graph.playTransport();
@@ -606,7 +624,7 @@ int runTest (const juce::ArgumentList& args)
     engine.stop();
     engine.setForceMonoInput (true);
 
-    const auto monoStartError = engine.start (inputDeviceName, outputDeviceName, 48000.0, 128);
+    const auto monoStartError = engine.start (inputDeviceName, outputDeviceName, testSampleRate, 128);
 
     if (monoStartError.isNotEmpty())
     {
