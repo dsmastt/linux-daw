@@ -20,7 +20,8 @@ public:
     juce::String start (const juce::String& inputDeviceName,
                         const juce::String& outputDeviceName,
                         double sampleRate,
-                        int bufferSize);
+                        int bufferSize,
+                        int numInputChannels = 2);
 
     void stop();
 
@@ -44,6 +45,8 @@ public:
     int getClipCount() const noexcept { return clipCounter.load(); }
 
     AudioGraph& getAudioGraph() noexcept { return audioGraph; }
+
+    void setForceMonoInput (bool shouldForceMono) noexcept { audioGraph.setForceMonoInput (shouldForceMono); }
 
     juce::String startRecording (const juce::File& file);
     void stopRecording();

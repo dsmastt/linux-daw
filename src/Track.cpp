@@ -712,7 +712,8 @@ void Track::process (const float* const* input,
                      const ClipSource& clipSource,
                      juce::MidiBuffer& midiEventsOut,
                      bool transportPlaying,
-                     const RoutingBuffers& routing) noexcept
+                     const RoutingBuffers& routing,
+                     bool forceMonoInput) noexcept
 {
     juce::ignoreUnused (output);
     if (isMuted() || (anyTrackSoloed && !isSoloed()))
@@ -724,12 +725,19 @@ void Track::process (const float* const* input,
     if (transportPlaying)
         applyAutomation (transportPositionSamples);
 
+    const bool monoInput = input != nullptr && input[0] != nullptr
+                           && (forceMonoInput || channels < 2 || input[1] == nullptr);
+
     for (int channel = 0; channel < channels; ++channel)
     {
         auto* scratchChannel = scratch[static_cast<size_t> (channel)].data();
 
-        if (input != nullptr && input[channel] != nullptr)
-            juce::FloatVectorOperations::copy (scratchChannel, input[channel], frames);
+        const auto* sourceChannel = monoInput
+                                      ? input[0]
+                                      : (input != nullptr ? input[channel] : nullptr);
+
+        if (sourceChannel != nullptr)
+            juce::FloatVectorOperations::copy (scratchChannel, sourceChannel, frames);
         else
             juce::FloatVectorOperations::clear (scratchChannel, frames);
     }

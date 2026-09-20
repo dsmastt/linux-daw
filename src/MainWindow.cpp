@@ -12,19 +12,17 @@ MainWindow::MainWindow (MainComponent& contentToOwn)
       content (contentToOwn)
 {
     setUsingNativeTitleBar (true);
-    setContentOwned (&contentToOwn, false);
+    setContentNonOwned (&contentToOwn, false);
     setResizable (true, true);
     setMenuBar (this);
     centreWithSize (800, 900);
     setVisible (true);
 
-    contentToOwn.addToDesktop (0, this);
 }
 
 MainWindow::~MainWindow()
 {
     setMenuBar (nullptr);
-    content.addToDesktop (0, nullptr);
 }
 
 void MainWindow::closeButtonPressed()

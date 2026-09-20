@@ -333,7 +333,7 @@ void testMidiEmission()
     for (int block = 0; block < 40; ++block)
     {
         track.process (nullptr, out, 2, 128, false, block * 128, {}, empty, true,
-                       daw::RoutingBuffers { { out[0], out[1] }, {} });
+                       daw::RoutingBuffers { { out[0], out[1] }, {} }, false);
     }
 
     CHECK (empty.getNumEvents() == 1);
@@ -346,6 +346,54 @@ void testMidiEmission()
         CHECK (message.getVelocity() == 100);
         CHECK (metadata.samplePosition == 64);
     }
+}
+
+void testMonoInputSpread()
+{
+    daw::AudioGraph graph;
+    graph.setForceMonoInput (true);
+    graph.getTrack (0).setReverbWetDry (0.0f);
+
+    juce::MidiBuffer midi;
+    juce::AudioBuffer<float> input (2, 128);
+    juce::AudioBuffer<float> output (2, 128);
+    input.clear();
+    output.clear();
+
+    const int numSamples = 128;
+    float* inputPointers[2] = { input.getWritePointer (0), input.getWritePointer (1) };
+    float* outputPointers[2] = { output.getWritePointer (0), output.getWritePointer (1) };
+
+    graph.prepare (48000.0, numSamples);
+    graph.reset();
+
+    for (int block = 0; block < 64; ++block)
+    {
+        output.clear();
+
+        for (int i = 0; i < numSamples; ++i)
+        {
+            inputPointers[0][i] = 0.25f * std::sin (2.0f * 3.14159265358979323846f * 440.0f * (block * numSamples + i) / 48000.0f);
+            inputPointers[1][i] = 0.0f;
+        }
+
+        graph.processWithInput (const_cast<const float**> (inputPointers), outputPointers, 2, numSamples, midi);
+    }
+
+    float leftPeak = 0.0f;
+    float rightPeak = 0.0f;
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        leftPeak = std::max (leftPeak, std::abs (output.getSample (0, i)));
+        rightPeak = std::max (rightPeak, std::abs (output.getSample (1, i)));
+    }
+
+    CHECK (leftPeak > 0.02f);
+    CHECK (rightPeak > 0.02f);
+    CHECK (std::abs (leftPeak - rightPeak) < 0.01f);
+
+    graph.setForceMonoInput (false);
 }
 
 void testProjectRoundTrip()
@@ -401,6 +449,7 @@ int main (int argc, char* argv[])
     testClipManipulation();
     testRoutingOffline();
     testMidiEmission();
+    testMonoInputSpread();
     testProjectRoundTrip();
 
     std::cout << checks << " checks, " << failures << " failures" << std::endl;

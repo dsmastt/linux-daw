@@ -16,7 +16,8 @@ AudioEngine::~AudioEngine()
 juce::String AudioEngine::start (const juce::String& inputDeviceName,
                                  const juce::String& outputDeviceName,
                                  double sampleRateToUse,
-                                 int bufferSizeToUse)
+                                 int bufferSizeToUse,
+                                 int numInputChannelsToUse)
 {
     stop();
 
@@ -26,7 +27,7 @@ juce::String AudioEngine::start (const juce::String& inputDeviceName,
     setup.sampleRate       = sampleRateToUse;
     setup.bufferSize       = bufferSizeToUse;
 
-    const auto error = deviceManager.initialise (2, 2, nullptr, false, {}, &setup);
+    const auto error = deviceManager.initialise (numInputChannelsToUse, 2, nullptr, false, {}, &setup);
 
     if (error.isNotEmpty())
         return error;
@@ -94,7 +95,9 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
 {
     const auto startTime = std::chrono::steady_clock::now();
 
-    recorder.recordBlock (inputChannelData, numInputChannelsIn, numSamples);
+    recorder.recordBlock (inputChannelData,
+                          audioGraph.isForceMonoInput() ? 1 : numInputChannelsIn,
+                          numSamples);
 
     float inputPeakThisBlock = 0.0f;
 

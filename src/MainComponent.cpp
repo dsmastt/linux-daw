@@ -43,6 +43,7 @@ MainComponent::MainComponent()
 
     inputLabel.setText ("Input:", juce::dontSendNotification);
     outputLabel.setText ("Output:", juce::dontSendNotification);
+    inputChannelsLabel.setText ("Input channels:", juce::dontSendNotification);
     sampleRateLabel.setText ("Sample rate:", juce::dontSendNotification);
     bufferLabel.setText ("Buffer:", juce::dontSendNotification);
 
@@ -50,10 +51,16 @@ MainComponent::MainComponent()
     addAndMakeVisible (inputCombo);
     addAndMakeVisible (outputLabel);
     addAndMakeVisible (outputCombo);
+    addAndMakeVisible (inputChannelsLabel);
+    addAndMakeVisible (inputChannelsCombo);
     addAndMakeVisible (sampleRateLabel);
     addAndMakeVisible (sampleRateCombo);
     addAndMakeVisible (bufferLabel);
     addAndMakeVisible (bufferCombo);
+
+    inputChannelsCombo.addItem ("Stereo (2)", 1);
+    inputChannelsCombo.addItem ("Mono (Left)", 2);
+    inputChannelsCombo.setSelectedItemIndex (0);
 
     sampleRateCombo.addItemList ({ "44100", "48000", "88200", "96000", "176400", "192000" }, 1);
     sampleRateCombo.setSelectedItemIndex (1);
@@ -154,6 +161,7 @@ void MainComponent::resized()
 
     makeRow (inputLabel, inputCombo);
     makeRow (outputLabel, outputCombo);
+    makeRow (inputChannelsLabel, inputChannelsCombo);
     makeRow (sampleRateLabel, sampleRateCombo);
     makeRow (bufferLabel, bufferCombo);
 
@@ -301,6 +309,9 @@ void MainComponent::startAudio()
 
     const auto sampleRate = sampleRateCombo.getText().getDoubleValue();
     const auto bufferSize = bufferCombo.getText().getIntValue();
+    const auto forceMono = inputChannelsCombo.getSelectedItemIndex() == 1;
+
+    engine.setForceMonoInput (forceMono);
 
     const auto error = engine.start (inputDeviceName, outputDeviceName, sampleRate, bufferSize);
 

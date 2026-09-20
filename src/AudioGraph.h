@@ -112,6 +112,9 @@ public:
 
     int getNumProcessors() const noexcept;
 
+    void setForceMonoInput (bool shouldForceMono) noexcept { forceMonoInput.store (shouldForceMono); }
+    bool isForceMonoInput() const noexcept { return forceMonoInput.load(); }
+
     void resetToDefaults() noexcept;
 
     void prepare (double sampleRate, int bufferSize) noexcept;
@@ -128,5 +131,6 @@ private:
     std::unique_ptr<PlaybackProcessor> playbackProcessor;
     Transport transport;
     std::vector<std::vector<float>> busBuffers[numBuses];
+    std::atomic<bool> forceMonoInput { false };
 };
 } // namespace daw

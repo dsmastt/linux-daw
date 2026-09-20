@@ -174,6 +174,7 @@ void AudioGraph::processWithInput (const float* const* inputChannels,
         anyTrackSoloed = anyTrackSoloed || track->isSoloed();
 
     const bool transportPlaying = transport.isPlaying();
+    const bool monoInputForced = forceMonoInput.load (std::memory_order_relaxed);
 
     RoutingBuffers routing {};
     routing.master[0] = outputChannels[0];
@@ -204,7 +205,8 @@ void AudioGraph::processWithInput (const float* const* inputChannels,
                                                                playbackProcessor->getPreparedChannels() },
                                                   midiEvents,
                                                   transportPlaying,
-                                                  routing);
+                                                  routing,
+                                                  monoInputForced);
 
     for (int bus = 0; bus < numBuses; ++bus)
         for (int channel = 0; channel < numChannels; ++channel)

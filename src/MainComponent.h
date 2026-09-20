@@ -40,6 +40,8 @@ private:
     juce::ComboBox inputCombo;
     juce::Label outputLabel;
     juce::ComboBox outputCombo;
+    juce::Label inputChannelsLabel;
+    juce::ComboBox inputChannelsCombo;
     juce::Label sampleRateLabel;
     juce::ComboBox sampleRateCombo;
     juce::Label bufferLabel;

@@ -160,7 +160,8 @@ public:
                   const ClipSource& clipSource,
                   juce::MidiBuffer& midiEvents,
                   bool transportPlaying,
-                  const RoutingBuffers& routing) noexcept;
+                  const RoutingBuffers& routing,
+                  bool forceMonoInput) noexcept;
 
 private:
     void applyAutomation (std::int64_t transportPositionSamples) noexcept;

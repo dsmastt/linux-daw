@@ -154,6 +154,44 @@ juce::File createClipTestFile()
 
     return file;
 }
+
+juce::File createIrTestFile()
+{
+    const auto file = juce::File ("/tmp/kilo/linux-daw-test-ir.wav");
+
+    if (auto stream = file.createOutputStream())
+    {
+        std::unique_ptr<juce::OutputStream> outputStream = std::move (stream);
+
+        juce::WavAudioFormat format;
+
+        const auto options = juce::AudioFormatWriter::Options{}
+                                 .withSampleRate (48000.0)
+                                 .withNumChannels (1)
+                                 .withBitsPerSample (16)
+                                 .withQualityOptionIndex (0);
+
+        if (auto writer = format.createWriterFor (outputStream, options))
+        {
+            constexpr int numSamples = 2048;
+
+            juce::AudioBuffer<float> buffer (1, numSamples);
+            auto* data = buffer.getWritePointer (0);
+
+            for (int i = 0; i < numSamples; ++i)
+            {
+                const float envelope = std::exp (-4.0f * static_cast<float> (i) / numSamples);
+                data[i] = envelope * std::sin (2.0f * 3.14159265358979323846f * 1000.0f * i / 48000.0f);
+            }
+
+            const float* pointers[1] = { data };
+            writer->writeFromFloatArrays (pointers, 1, numSamples);
+            writer->flush();
+        }
+    }
+
+    return file;
+}
 juce::AudioIODeviceType* findAlsaType (juce::OwnedArray<juce::AudioIODeviceType>& types)
 {
     for (auto* type : types)
@@ -251,7 +289,7 @@ int runTest (const juce::ArgumentList& args)
 
     std::cout << "Clip file loaded" << std::endl;
 
-    const auto irError = graph.getTrack (0).loadImpulseResponse (juce::File ("/tmp/kilo/test-ir.wav"));
+    const auto irError = graph.getTrack (0).loadImpulseResponse (createIrTestFile());
 
     if (irError.isNotEmpty())
     {
@@ -564,6 +602,26 @@ int runTest (const juce::ArgumentList& args)
             profilingOk = true;
     }
 
+    // Mono input test: force the graph to use only the left input channel.
+    engine.stop();
+    engine.setForceMonoInput (true);
+
+    const auto monoStartError = engine.start (inputDeviceName, outputDeviceName, 48000.0, 128);
+
+    if (monoStartError.isNotEmpty())
+    {
+        std::cout << "Mono engine start failed: " << monoStartError << std::endl;
+        graph.unloadVst3Plugin();
+        return 1;
+    }
+
+    juce::Thread::sleep (500);
+
+    const auto monoModeOk = graph.isForceMonoInput();
+
+    std::cout << "Mono (left) input mode active: " << (monoModeOk ? "yes" : "no")
+              << ", xruns " << engine.getXRunCount() << std::endl;
+
     // MIDI round-trip test via virtual devices.
     const auto midiOpenError = engine.openVirtualMidiDevice ("linux-daw-test-midi");
 
@@ -609,7 +667,7 @@ int runTest (const juce::ArgumentList& args)
 
     if (callbacks == 0 || xruns != 0 || !transportOk || !clipsOk || !midiOk || !midiTrackOk
         || !volumeAutomationOk || !pluginAutomationOk || !roundTripOk || !undoOk1 || !undoOk2 || !redoOk
-        || !profilingOk || !irPreparedOk || !routingOk || !sendOk)
+        || !profilingOk || !irPreparedOk || !routingOk || !sendOk || !monoModeOk)
     {
         std::cout << "VST3 host test FAILED" << std::endl;
         return 1;
