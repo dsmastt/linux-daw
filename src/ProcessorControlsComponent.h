@@ -165,6 +165,7 @@ private:
         juce::ToggleButton bypassButton;
         juce::TextButton editorButton;
         juce::TextEditor statusText;
+        juce::Viewport parameterViewport;
         juce::Component parameterPanel;
         juce::ThreadPool scanPool;
         std::vector<juce::Slider*> parameterSliders;

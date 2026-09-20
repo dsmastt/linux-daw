@@ -398,8 +398,13 @@ public:
         setUsingNativeTitleBar (true);
         setContentOwned (content, true);
         setResizable (true, false);
-        setSize (content->getWidth(), content->getHeight() + getTitleBarHeight());
+
+        const int width = std::max (content->getWidth(), 480);
+        const int height = std::max (content->getHeight(), 360);
+
+        setSize (width, height + getTitleBarHeight());
         setVisible (true);
+        toFront (true);
     }
 
     void closeButtonPressed() override
@@ -458,7 +463,8 @@ ProcessorControlsComponent::PluginTab::PluginTab (AudioEngine& engineToUse, Undo
     statusText.setText ("No plugin loaded", juce::dontSendNotification);
     addAndMakeVisible (statusText);
 
-    addAndMakeVisible (parameterPanel);
+    parameterViewport.setViewedComponent (&parameterPanel, false);
+    addAndMakeVisible (parameterViewport);
 
     rescanPlugins();
 }
@@ -495,7 +501,12 @@ void ProcessorControlsComponent::PluginTab::resized()
 
     bounds.removeFromTop (8);
 
-    parameterPanel.setBounds (bounds);
+    parameterViewport.setBounds (bounds);
+    parameterViewport.setScrollBarsShown (true, false, true, false);
+
+    const int contentHeight = static_cast<int> (parameterSliders.size()) * 28;
+    parameterPanel.setBounds (0, 0, std::max (parameterViewport.getWidth(), 100), std::max (contentHeight, 1));
+    parameterViewport.setViewedComponent (&parameterPanel, false);
 
     auto parameterBounds = parameterPanel.getLocalBounds();
 
@@ -576,6 +587,9 @@ void ProcessorControlsComponent::PluginTab::loadSelectedPlugin()
     editorButton.setEnabled (instance != nullptr && instance->hasEditor());
 
     rebuildParameterSliders();
+
+    if (instance != nullptr && instance->hasEditor())
+        openEditor();
 }
 
 void ProcessorControlsComponent::PluginTab::removePlugin()
