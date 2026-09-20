@@ -93,7 +93,8 @@ void Vst3HostProcessor::processWithMidi (float* const* channels, int numChannels
     }
 }
 
-std::vector<juce::PluginDescription> scanVst3Plugins (const juce::StringArray& paths)
+std::vector<juce::PluginDescription> scanVst3Plugins (const juce::StringArray& paths,
+                                                      const juce::File& deadMansPedalFile)
 {
     std::vector<juce::PluginDescription> result;
 
@@ -105,7 +106,8 @@ std::vector<juce::PluginDescription> scanVst3Plugins (const juce::StringArray& p
         if (!juce::File (path).isDirectory())
             continue;
 
-        juce::PluginDirectoryScanner scanner (knownList, format, juce::FileSearchPath (path), true, juce::File(), true);
+        juce::PluginDirectoryScanner scanner (knownList, format, juce::FileSearchPath (path), true,
+                                              deadMansPedalFile, true);
 
         juce::String name;
 

@@ -45,5 +45,6 @@ private:
     int bufferSize = 0;
 };
 
-std::vector<juce::PluginDescription> scanVst3Plugins (const juce::StringArray& paths);
+std::vector<juce::PluginDescription> scanVst3Plugins (const juce::StringArray& paths,
+                                                      const juce::File& deadMansPedalFile = {});
 } // namespace daw

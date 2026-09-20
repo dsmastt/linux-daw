@@ -515,11 +515,15 @@ void ProcessorControlsComponent::PluginTab::rescanPlugins()
     paths.add ("/usr/local/lib/vst3");
     paths.add ("build/linux-daw-test-plugin_artefacts/VST3");
 
+    const auto deadMansPedalFile = juce::File::getSpecialLocation (juce::File::userApplicationDataDirectory)
+                                        .getChildFile ("linux-daw")
+                                        .getChildFile ("dead_mans_pedal");
+
     const juce::Component::SafePointer<PluginTab> safeThis (this);
 
-    scanPool.addJob ([safeThis, paths]
+    scanPool.addJob ([safeThis, paths, deadMansPedalFile]
     {
-        auto found = scanVst3Plugins (paths);
+        auto found = scanVst3Plugins (paths, deadMansPedalFile);
 
         juce::MessageManager::callAsync ([safeThis, found = std::move (found)]
         {
