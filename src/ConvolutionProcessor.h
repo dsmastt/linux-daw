@@ -23,7 +23,11 @@ public:
 
     bool hasImpulseResponse() const noexcept { return hasImpulseResponse_.load(); }
     int getImpulseResponseLength() const noexcept;
-    juce::String getImpulseResponseFilePath() const noexcept { return impulseResponseFilePath; }
+    juce::String getImpulseResponseFilePath() const noexcept
+    {
+        const juce::SpinLock::ScopedLockType lock (impulseResponseLock);
+        return impulseResponseFilePath;
+    }
 
     void prepare (double sampleRate, int bufferSize) noexcept override;
     void process (float* const* channels, int numChannels, int numSamples) noexcept override;
@@ -61,8 +65,12 @@ private:
 
     std::atomic<bool> hasImpulseResponse_ { false };
     std::vector<float> impulseResponse;
+    mutable juce::SpinLock impulseResponseLock;
     double impulseResponseSampleRate = 0.0;
     juce::String impulseResponseFilePath;
+
+    double configuredSampleRate = 0.0;
+    int configuredBufferSize = 0;
 
     PreparedPartitions prepared[2];
     std::atomic<int> activeIndex { 0 };

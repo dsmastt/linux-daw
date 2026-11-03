@@ -8,8 +8,10 @@
 #include "MeterComponent.h"
 #include "MidiComponent.h"
 #include "MixerComponent.h"
+#include "PresetComponent.h"
 #include "ProcessorControlsComponent.h"
 #include "TimelineComponent.h"
+#include "TunerComponent.h"
 #include "UndoManager.h"
 
 namespace daw
@@ -53,6 +55,8 @@ private:
     juce::TextButton transportStopButton;
     juce::Label tempoLabel;
     juce::Slider tempoSlider;
+    juce::ToggleButton metronomeButton;
+    juce::Slider metronomeVolume;
     juce::TextEditor transportStatus;
     juce::TabbedComponent viewTabs;
     std::unique_ptr<ProcessorControlsComponent> processorControls;
@@ -60,6 +64,8 @@ private:
     std::unique_ptr<TimelineComponent> timeline;
     std::unique_ptr<MidiComponent> midi;
     std::unique_ptr<AutomationComponent> automation;
+    std::unique_ptr<TunerComponent> tunerComponent;
+    std::unique_ptr<PresetComponent> presetComponent;
     MeterComponent inputMeter;
     MeterComponent outputMeter;
     juce::TextEditor statusLabel;

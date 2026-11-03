@@ -390,6 +390,18 @@ bool Track::isVst3PluginBypassed() const noexcept
     return vst3Processor != nullptr && vst3Processor->isBypassed();
 }
 
+void Track::setProcessorBypassed (ProcessorSlot slot, bool shouldBeBypassed) noexcept
+{
+    if (slot != ProcessorSlot::count)
+        chain.setProcessorBypassed (static_cast<int> (slot), shouldBeBypassed);
+}
+
+bool Track::isProcessorBypassed (ProcessorSlot slot) const noexcept
+{
+    return slot != ProcessorSlot::count
+             && chain.isProcessorBypassed (static_cast<int> (slot));
+}
+
 juce::AudioPluginInstance* Track::getVst3PluginInstance() const noexcept
 {
     return vst3Processor != nullptr ? vst3Processor->getInstance() : nullptr;
@@ -678,6 +690,7 @@ void Track::resetParameters() noexcept
 
     clearImpulseResponse();
     unloadVst3Plugin();
+    chain.clearBypasses();
 
     clipCount.store (0, std::memory_order_release);
     midiEventCount.store (0, std::memory_order_release);

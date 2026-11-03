@@ -26,6 +26,10 @@ public:
     void processWithMidi (float* const* channels, int numChannels, int numSamples, juce::MidiBuffer& midiEvents) noexcept override;
     void reset() noexcept override;
 
+    void setProcessorBypassed (int index, bool shouldBeBypassed) noexcept;
+    bool isProcessorBypassed (int index) const noexcept;
+    void clearBypasses() noexcept;
+
     int getMeasuredProcessorCount() const noexcept { return measuredCount; }
     juce::String getProcessorName (int index) const noexcept;
     double getProcessorTotalTimeMs (int index) const noexcept;

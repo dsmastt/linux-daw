@@ -2,8 +2,33 @@
 
 #include <algorithm>
 
+#include <unistd.h>
+
 namespace daw
 {
+namespace
+{
+void setupBypassButton (juce::ToggleButton& button, AudioGraph& graph, ProcessorSlot slot)
+{
+    button.setButtonText ("Bypass");
+    button.setToggleState (graph.isProcessorBypassed (slot), juce::dontSendNotification);
+    button.onClick = [&button, &graph, slot]
+    {
+        graph.setProcessorBypassed (slot, button.getToggleState());
+    };
+}
+
+void layoutRowsInBounds (const std::vector<std::unique_ptr<ProcessorControlsComponent::SliderRow>>& rows,
+                         juce::Rectangle<int> bounds)
+{
+    for (const auto& row : rows)
+    {
+        row->setBounds (bounds.removeFromTop (88));
+        bounds.removeFromTop (4);
+    }
+}
+} // namespace
+
 //==============================================================================
 ProcessorControlsComponent::SliderRow::SliderRow (const juce::String& name,
                                                   double minValue, double maxValue, double step, double initialValue,
@@ -42,18 +67,25 @@ ProcessorControlsComponent::GainTab::GainTab (AudioGraph& graphToUse)
     rows.push_back (std::make_unique<SliderRow> ("Gain (dB)", -60.0, 12.0, 0.5, graph.getGainDb(),
                                                  [this] (double value) { graph.setGainDb (static_cast<float> (value)); }));
 
+    setupBypassButton (bypassButton, graph, ProcessorSlot::gain);
+    addAndMakeVisible (bypassButton);
+
     for (auto& row : rows)
         addAndMakeVisible (*row);
 }
 
 void ProcessorControlsComponent::GainTab::resized()
 {
-    layoutRows (*this, rows);
+    auto bounds = getLocalBounds().reduced (10);
+    bypassButton.setBounds (bounds.removeFromTop (24));
+    bounds.removeFromTop (6);
+    layoutRowsInBounds (rows, bounds);
 }
 
 void ProcessorControlsComponent::GainTab::refreshFromGraph()
 {
     rows[0]->slider.setValue (graph.getGainDb(), juce::dontSendNotification);
+    bypassButton.setToggleState (graph.isProcessorBypassed (ProcessorSlot::gain), juce::dontSendNotification);
 }
 
 //==============================================================================
@@ -67,13 +99,19 @@ ProcessorControlsComponent::GateTab::GateTab (AudioGraph& graphToUse)
     rows.push_back (std::make_unique<SliderRow> ("Release (ms)", 1.0, 1000.0, 1.0, graph.getGateReleaseMs(),
                                                  [this] (double value) { graph.setGateReleaseMs (static_cast<float> (value)); }));
 
+    setupBypassButton (bypassButton, graph, ProcessorSlot::gate);
+    addAndMakeVisible (bypassButton);
+
     for (auto& row : rows)
         addAndMakeVisible (*row);
 }
 
 void ProcessorControlsComponent::GateTab::resized()
 {
-    layoutRows (*this, rows);
+    auto bounds = getLocalBounds().reduced (10);
+    bypassButton.setBounds (bounds.removeFromTop (24));
+    bounds.removeFromTop (6);
+    layoutRowsInBounds (rows, bounds);
 }
 
 void ProcessorControlsComponent::GateTab::refreshFromGraph()
@@ -81,6 +119,7 @@ void ProcessorControlsComponent::GateTab::refreshFromGraph()
     rows[0]->slider.setValue (graph.getGateThresholdDb(), juce::dontSendNotification);
     rows[1]->slider.setValue (graph.getGateAttackMs(), juce::dontSendNotification);
     rows[2]->slider.setValue (graph.getGateReleaseMs(), juce::dontSendNotification);
+    bypassButton.setToggleState (graph.isProcessorBypassed (ProcessorSlot::gate), juce::dontSendNotification);
 }
 
 //==============================================================================
@@ -102,6 +141,9 @@ ProcessorControlsComponent::EqTab::EqTab (AudioGraph& graphToUse)
                                                      [this, band] (double value) { graph.setEqBandParameters (band, graph.getEqBandFrequency (band), graph.getEqBandGain (band), static_cast<float> (value)); }));
     }
 
+    setupBypassButton (bypassButton, graph, ProcessorSlot::eq);
+    addAndMakeVisible (bypassButton);
+
     for (auto& row : rows)
         addAndMakeVisible (*row);
 }
@@ -114,11 +156,15 @@ void ProcessorControlsComponent::EqTab::refreshFromGraph()
         rows[static_cast<size_t> (band * 3 + 1)]->slider.setValue (graph.getEqBandGain (band), juce::dontSendNotification);
         rows[static_cast<size_t> (band * 3 + 2)]->slider.setValue (graph.getEqBandQ (band), juce::dontSendNotification);
     }
+
+    bypassButton.setToggleState (graph.isProcessorBypassed (ProcessorSlot::eq), juce::dontSendNotification);
 }
 
 void ProcessorControlsComponent::EqTab::resized()
 {
     auto bounds = getLocalBounds().reduced (10);
+    bypassButton.setBounds (bounds.removeFromTop (24));
+    bounds.removeFromTop (6);
 
     const int numBands = 4;
     const auto columnWidth = bounds.getWidth() / 2;
@@ -153,13 +199,19 @@ ProcessorControlsComponent::CompressorTab::CompressorTab (AudioGraph& graphToUse
     rows.push_back (std::make_unique<SliderRow> ("Makeup (dB)", 0.0, 24.0, 0.5, 0.0,
                                                  [this] (double value) { graph.setCompressorMakeupGainDb (static_cast<float> (value)); }));
 
+    setupBypassButton (bypassButton, graph, ProcessorSlot::compressor);
+    addAndMakeVisible (bypassButton);
+
     for (auto& row : rows)
         addAndMakeVisible (*row);
 }
 
 void ProcessorControlsComponent::CompressorTab::resized()
 {
-    layoutRows (*this, rows);
+    auto bounds = getLocalBounds().reduced (10);
+    bypassButton.setBounds (bounds.removeFromTop (24));
+    bounds.removeFromTop (6);
+    layoutRowsInBounds (rows, bounds);
 }
 
 void ProcessorControlsComponent::CompressorTab::refreshFromGraph()
@@ -169,6 +221,7 @@ void ProcessorControlsComponent::CompressorTab::refreshFromGraph()
     rows[2]->slider.setValue (graph.getCompressorAttackMs(), juce::dontSendNotification);
     rows[3]->slider.setValue (graph.getCompressorReleaseMs(), juce::dontSendNotification);
     rows[4]->slider.setValue (graph.getCompressorMakeupGainDb(), juce::dontSendNotification);
+    bypassButton.setToggleState (graph.isProcessorBypassed (ProcessorSlot::compressor), juce::dontSendNotification);
 }
 
 //==============================================================================
@@ -195,6 +248,9 @@ ProcessorControlsComponent::DistortionTab::DistortionTab (AudioGraph& graphToUse
 
     addAndMakeVisible (modeCombo);
 
+    setupBypassButton (bypassButton, graph, ProcessorSlot::distortion);
+    addAndMakeVisible (bypassButton);
+
     for (auto& row : rows)
         addAndMakeVisible (*row);
 }
@@ -202,6 +258,8 @@ ProcessorControlsComponent::DistortionTab::DistortionTab (AudioGraph& graphToUse
 void ProcessorControlsComponent::DistortionTab::resized()
 {
     auto bounds = getLocalBounds().reduced (10);
+    bypassButton.setBounds (bounds.removeFromTop (24));
+    bounds.removeFromTop (6);
 
     for (const auto& row : rows)
     {
@@ -219,6 +277,7 @@ void ProcessorControlsComponent::DistortionTab::refreshFromGraph()
     rows[0]->slider.setValue (graph.getDistortionDriveDb(), juce::dontSendNotification);
     rows[1]->slider.setValue (graph.getDistortionTone(), juce::dontSendNotification);
     modeCombo.setSelectedItemIndex (static_cast<int> (graph.getDistortionMode()), juce::dontSendNotification);
+    bypassButton.setToggleState (graph.isProcessorBypassed (ProcessorSlot::distortion), juce::dontSendNotification);
 }
 
 //==============================================================================
@@ -281,11 +340,25 @@ ProcessorControlsComponent::CabinetTab::CabinetTab (AudioGraph& graphToUse, Undo
                         juce::dontSendNotification);
 
     addAndMakeVisible (statusText);
+
+    setupBypassButton (bypassButton, graph, ProcessorSlot::convolution);
+    addAndMakeVisible (bypassButton);
+}
+
+void ProcessorControlsComponent::CabinetTab::refreshFromGraph()
+{
+    bypassButton.setToggleState (graph.isProcessorBypassed (ProcessorSlot::convolution), juce::dontSendNotification);
+    statusText.setText (graph.hasImpulseResponse()
+                            ? "Impulse response loaded (" + juce::String (graph.getImpulseResponseLength()) + " samples)"
+                            : "No impulse response loaded",
+                        juce::dontSendNotification);
 }
 
 void ProcessorControlsComponent::CabinetTab::resized()
 {
     auto bounds = getLocalBounds().reduced (10);
+    bypassButton.setBounds (bounds.removeFromTop (24));
+    bounds.removeFromTop (6);
 
     auto buttonRow = bounds.removeFromTop (34);
     loadButton.setBounds (buttonRow.removeFromLeft (110));
@@ -307,13 +380,19 @@ ProcessorControlsComponent::ReverbTab::ReverbTab (AudioGraph& graphToUse)
     rows.push_back (std::make_unique<SliderRow> ("Size", 0.0, 1.0, 0.01, 0.5,
                                                  [this] (double value) { graph.setReverbSize (static_cast<float> (value)); }));
 
+    setupBypassButton (bypassButton, graph, ProcessorSlot::reverb);
+    addAndMakeVisible (bypassButton);
+
     for (auto& row : rows)
         addAndMakeVisible (*row);
 }
 
 void ProcessorControlsComponent::ReverbTab::resized()
 {
-    layoutRows (*this, rows);
+    auto bounds = getLocalBounds().reduced (10);
+    bypassButton.setBounds (bounds.removeFromTop (24));
+    bounds.removeFromTop (6);
+    layoutRowsInBounds (rows, bounds);
 }
 
 void ProcessorControlsComponent::ReverbTab::refreshFromGraph()
@@ -321,6 +400,7 @@ void ProcessorControlsComponent::ReverbTab::refreshFromGraph()
     rows[0]->slider.setValue (graph.getReverbWetDry(), juce::dontSendNotification);
     rows[1]->slider.setValue (graph.getReverbDecay(), juce::dontSendNotification);
     rows[2]->slider.setValue (graph.getReverbSize(), juce::dontSendNotification);
+    bypassButton.setToggleState (graph.isProcessorBypassed (ProcessorSlot::reverb), juce::dontSendNotification);
 }
 
 //==============================================================================
@@ -349,6 +429,8 @@ ProcessorControlsComponent::ProcessorControlsComponent (AudioEngine& engineToUse
     tabs.addTab ("Reverb", juce::Colours::darkgrey, &reverbTab, false);
     tabs.addTab ("Plugin", juce::Colours::darkgrey, &pluginTab, false);
 
+    tabs.getTabbedButtonBar().addChangeListener (this);
+
     wireUndoTab (gainTab);
     wireUndoTab (gateTab);
     wireUndoTab (eqTab);
@@ -364,27 +446,26 @@ void ProcessorControlsComponent::refreshFromGraph()
     eqTab.refreshFromGraph();
     compressorTab.refreshFromGraph();
     distortionTab.refreshFromGraph();
+    cabinetTab.refreshFromGraph();
     reverbTab.refreshFromGraph();
 
     pluginTab.refreshFromGraph();
 }
 
-ProcessorControlsComponent::~ProcessorControlsComponent() = default;
+ProcessorControlsComponent::~ProcessorControlsComponent()
+{
+    tabs.getTabbedButtonBar().removeChangeListener (this);
+}
+
+void ProcessorControlsComponent::changeListenerCallback (juce::ChangeBroadcaster*)
+{
+    if (tabs.getCurrentTabIndex() == tabs.getNumTabs() - 1)
+        pluginTab.scanPluginsIfNeeded();
+}
 
 void ProcessorControlsComponent::resized()
 {
     tabs.setBounds (getLocalBounds());
-}
-
-void ProcessorControlsComponent::layoutRows (juce::Component& parent, const std::vector<std::unique_ptr<SliderRow>>& rows)
-{
-    auto bounds = parent.getLocalBounds().reduced (10);
-
-    for (const auto& row : rows)
-    {
-        row->setBounds (bounds.removeFromTop (88));
-        bounds.removeFromTop (4);
-    }
 }
 
 //==============================================================================
@@ -469,7 +550,7 @@ ProcessorControlsComponent::PluginTab::PluginTab (AudioEngine& engineToUse, Undo
     parameterViewport.setViewedComponent (&parameterPanel, false);
     addAndMakeVisible (parameterViewport);
 
-    rescanPlugins();
+    statusText.setText ("Open this tab to scan for plugins", juce::dontSendNotification);
 }
 
 ProcessorControlsComponent::PluginTab::~PluginTab()
@@ -521,8 +602,18 @@ void ProcessorControlsComponent::PluginTab::resized()
     }
 }
 
+void ProcessorControlsComponent::PluginTab::scanPluginsIfNeeded()
+{
+    if (scanStarted)
+        return;
+
+    rescanPlugins();
+}
+
 void ProcessorControlsComponent::PluginTab::rescanPlugins()
 {
+    scanStarted = true;
+
     juce::StringArray paths;
     paths.add (juce::File::getSpecialLocation (juce::File::userHomeDirectory).getChildFile (".vst3").getFullPathName());
     paths.add ("/usr/lib/vst3");
@@ -537,6 +628,11 @@ void ProcessorControlsComponent::PluginTab::rescanPlugins()
 
     scanPool.addJob ([safeThis, paths, deadMansPedalFile]
     {
+        // Plugin scanning can load many DLLs (and, with yabridge, start
+        // several Wine processes). Keep it out of the way of the audio
+        // thread if the user starts audio while this is running.
+        ::nice (10);
+
         auto found = scanVst3Plugins (paths, deadMansPedalFile);
 
         juce::MessageManager::callAsync ([safeThis, found = std::move (found)]

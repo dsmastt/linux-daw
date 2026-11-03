@@ -1,6 +1,7 @@
 #include "MainComponent.h"
 
 #include <pthread.h>
+#include <sched.h>
 
 #include "DarkLookAndFeel.h"
 
@@ -17,16 +18,18 @@ juce::AudioIODeviceType* findAlsaType (const juce::OwnedArray<juce::AudioIODevic
     return nullptr;
 }
 
-void selectItemContaining (juce::ComboBox& combo, const juce::String& text)
+bool selectItemContaining (juce::ComboBox& combo, const juce::String& text)
 {
     for (int i = 0; i < combo.getNumItems(); ++i)
     {
         if (combo.getItemText (i).contains (text))
         {
             combo.setSelectedItemIndex (i);
-            return;
+            return true;
         }
     }
+
+    return false;
 }
 } // namespace
 
@@ -62,13 +65,13 @@ MainComponent::MainComponent()
 
     inputChannelsCombo.addItem ("Stereo (2)", 1);
     inputChannelsCombo.addItem ("Mono (Left)", 2);
-    inputChannelsCombo.setSelectedItemIndex (0);
+    inputChannelsCombo.setSelectedItemIndex (1);
 
     sampleRateCombo.addItemList ({ "44100", "48000", "88200", "96000", "176400", "192000" }, 1);
     sampleRateCombo.setSelectedItemIndex (1);
 
     bufferCombo.addItemList ({ "64", "128", "256", "512", "1024" }, 1);
-    bufferCombo.setSelectedItemIndex (1);
+    bufferCombo.setSelectedItemIndex (2);
 
     startButton.setButtonText ("Start Audio");
     stopButton.setButtonText ("Stop Audio");
@@ -104,6 +107,24 @@ MainComponent::MainComponent()
     };
     addAndMakeVisible (tempoSlider);
 
+    metronomeButton.setButtonText ("Click");
+    metronomeButton.onClick = [this]
+    {
+        engine.getAudioGraph().getMetronome().setEnabled (metronomeButton.getToggleState());
+    };
+    addAndMakeVisible (metronomeButton);
+
+    metronomeVolume.setSliderStyle (juce::Slider::LinearHorizontal);
+    metronomeVolume.setRange (0.0, 1.0, 0.01);
+    metronomeVolume.setValue (0.5, juce::dontSendNotification);
+    metronomeVolume.setTextBoxStyle (juce::Slider::TextBoxRight, false, 34, 20);
+    metronomeVolume.setTooltip ("Metronome volume");
+    metronomeVolume.onValueChange = [this]
+    {
+        engine.getAudioGraph().getMetronome().setVolume (static_cast<float> (metronomeVolume.getValue()));
+    };
+    addAndMakeVisible (metronomeVolume);
+
     transportStatus.setMultiLine (false, false);
     transportStatus.setReadOnly (true);
     transportStatus.setCaretVisible (false);
@@ -114,12 +135,19 @@ MainComponent::MainComponent()
     timeline = std::make_unique<TimelineComponent> (engine, undoManager);
     midi = std::make_unique<MidiComponent> (engine);
     automation = std::make_unique<AutomationComponent> (engine, undoManager);
+    tunerComponent = std::make_unique<TunerComponent> (engine);
+    presetComponent = std::make_unique<PresetComponent> (engine, undoManager, [this]
+    {
+        refreshAfterUndoRedo();
+    });
 
     viewTabs.addTab ("DSP", juce::Colours::darkgrey, processorControls.get(), false);
+    viewTabs.addTab ("Tuner", juce::Colours::darkgrey, tunerComponent.get(), false);
     viewTabs.addTab ("Mixer", juce::Colours::darkgrey, mixer.get(), false);
     viewTabs.addTab ("Timeline", juce::Colours::darkgrey, timeline.get(), false);
     viewTabs.addTab ("MIDI", juce::Colours::darkgrey, midi.get(), false);
     viewTabs.addTab ("Automation", juce::Colours::darkgrey, automation.get(), false);
+    viewTabs.addTab ("Presets", juce::Colours::darkgrey, presetComponent.get(), false);
     addAndMakeVisible (viewTabs);
 
     addAndMakeVisible (inputMeter);
@@ -142,6 +170,12 @@ MainComponent::MainComponent()
 MainComponent::~MainComponent()
 {
     stopTimer();
+
+    // These components own timers that reference the engine, so destroy them
+    // before the engine and the message loop go away.
+    tunerComponent.reset();
+    presetComponent.reset();
+
     stopAudio();
 }
 
@@ -185,7 +219,11 @@ void MainComponent::resized()
     transportRow.removeFromLeft (12);
     tempoLabel.setBounds (transportRow.removeFromLeft (60));
     tempoSlider.setBounds (transportRow.removeFromLeft (110));
-    transportRow.removeFromLeft (12);
+    transportRow.removeFromLeft (10);
+    metronomeButton.setBounds (transportRow.removeFromLeft (62));
+    transportRow.removeFromLeft (6);
+    metronomeVolume.setBounds (transportRow.removeFromLeft (70));
+    transportRow.removeFromLeft (10);
     transportStatus.setBounds (transportRow);
 
     bounds.removeFromTop (10);
@@ -294,8 +332,14 @@ void MainComponent::refreshDevices()
     for (const auto& name : alsaType->getDeviceNames (false))
         outputCombo.addItem (name, id++);
 
-    selectItemContaining (inputCombo, "AI-04");
-    selectItemContaining (outputCombo, "AI-04");
+    if (! selectItemContaining (inputCombo, "AI-04") && inputCombo.getNumItems() > 0)
+        inputCombo.setSelectedItemIndex (0);
+
+    if (! selectItemContaining (outputCombo, "Default ALSA Output") && outputCombo.getNumItems() > 0)
+        outputCombo.setSelectedItemIndex (0);
+
+    inputChannelsCombo.setSelectedItemIndex (1);
+    bufferCombo.setSelectedItemIndex (2);
 }
 
 void MainComponent::startAudio()
@@ -371,6 +415,8 @@ void MainComponent::updateStatus()
         }
     }
 
+    const auto maxCallbackMs = engine.getMaxCallbackTimeMs();
+
     status << "Running\n"
            << "Sample rate: " << static_cast<int> (engine.getSampleRate()) << " Hz\n"
            << "Buffer size: " << engine.getBufferSize() << " samples\n"
@@ -379,7 +425,12 @@ void MainComponent::updateStatus()
            << "Latency: " << latencyMs << " ms\n"
            << "Xruns: " << engine.getXRunCount() << "\n"
            << "Callbacks: " << engine.getNumCallbacks() << "\n"
-           << "Heaviest DSP: " << worstProcessor;
+           << "Max callback: " << maxCallbackMs << " ms";
+
+    if (periodMs > 0.0)
+        status << " (" << static_cast<int> (100.0 * maxCallbackMs / periodMs) << "% of period)";
+
+    status << "\nHeaviest DSP: " << worstProcessor;
 
     if (worstShare > 0.0 && periodMs > 0.0)
         status << " (" << static_cast<int> (100.0 * worstShare / periodMs) << "% of period)";
@@ -397,6 +448,9 @@ void MainComponent::updateStatus()
     pthread_getschedparam (pthread_self(), &policy, &scheduling);
 
     status << "\nThread scheduling: policy " << policy << ", priority " << scheduling.sched_priority;
+
+    if (policy == SCHED_OTHER)
+        status << " (normal priority; realtime scheduling unavailable)";
 
     statusLabel.setText (status, juce::dontSendNotification);
 }

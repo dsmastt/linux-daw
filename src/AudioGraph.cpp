@@ -78,6 +78,9 @@ void AudioGraph::setVst3PluginBypassed (bool shouldBeBypassed) noexcept { getTra
 bool AudioGraph::isVst3PluginBypassed() const noexcept { return getTrack (0).isVst3PluginBypassed(); }
 juce::AudioPluginInstance* AudioGraph::getVst3PluginInstance() const noexcept { return getTrack (0).getVst3PluginInstance(); }
 
+void AudioGraph::setProcessorBypassed (ProcessorSlot slot, bool shouldBeBypassed) noexcept { getTrack (0).setProcessorBypassed (slot, shouldBeBypassed); }
+bool AudioGraph::isProcessorBypassed (ProcessorSlot slot) const noexcept { return getTrack (0).isProcessorBypassed (slot); }
+
 juce::String AudioGraph::loadPlaybackFile (const juce::File& file)
 {
     return playbackProcessor->loadFile (file);
@@ -132,6 +135,9 @@ void AudioGraph::resetToDefaults() noexcept
 
 void AudioGraph::prepare (double sampleRate, int bufferSize) noexcept
 {
+    preparedSampleRate = sampleRate;
+    preparedBufferSize = bufferSize;
+
     for (auto& track : tracks)
         track->prepare (sampleRate, bufferSize);
 
@@ -139,6 +145,7 @@ void AudioGraph::prepare (double sampleRate, int bufferSize) noexcept
         busBuffer.assign (static_cast<size_t> (maxChannels), std::vector<float> (maxBlockFrames, 0.0f));
 
     playbackProcessor->prepare (sampleRate, bufferSize);
+    metronome.prepare (sampleRate);
 }
 
 void AudioGraph::reset() noexcept
@@ -151,6 +158,7 @@ void AudioGraph::reset() noexcept
             std::fill (channel.begin(), channel.end(), 0.0f);
 
     playbackProcessor->reset();
+    metronome.reset();
 }
 
 void AudioGraph::processWithInput (const float* const* inputChannels,
@@ -216,5 +224,12 @@ void AudioGraph::processWithInput (const float* const* inputChannels,
                                                   numSamples);
 
     playbackProcessor->process (outputChannels, numChannels, numSamples);
+
+    metronome.process (outputChannels,
+                       numChannels,
+                       numSamples,
+                       transportPosition,
+                       transportPlaying,
+                       transport.getTempoBpm());
 }
 } // namespace daw

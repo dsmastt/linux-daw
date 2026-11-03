@@ -34,35 +34,47 @@ juce::String PlaybackProcessor::loadFile (const juce::File& file)
             loaded[static_cast<size_t> (frame * numSourceChannels + channel)] = readPointer[frame];
     }
 
-    sourceData = std::move (loaded);
-    sourceSampleRate = reader->sampleRate;
-    sourceChannels = numSourceChannels;
-    loadedFilePath = file.getFullPathName();
+    {
+        const juce::SpinLock::ScopedLockType lock (sourceLock);
+
+        sourceData = std::move (loaded);
+        sourceSampleRate = reader->sampleRate;
+        sourceChannels = numSourceChannels;
+        loadedFilePath = file.getFullPathName();
+    }
 
     playing.store (false, std::memory_order_relaxed);
     position.store (0, std::memory_order_relaxed);
     pendingPositionSeconds.store (-1.0, std::memory_order_relaxed);
 
+    // Stop using the previous buffer, but keep it alive: the audio thread
+    // may still be reading it. The prepared slots are only replaced by the
+    // preparation thread after it has built a complete new buffer.
     prepareReady.store (false, std::memory_order_release);
-    prepared[0] = PreparedData {};
-    prepared[1] = PreparedData {};
+
+    if (configuredSampleRate > 0.0)
+        prepare (configuredSampleRate, configuredBufferSize);
 
     return {};
 }
 
 void PlaybackProcessor::clearFile() noexcept
 {
-    sourceData.clear();
-    sourceSampleRate = 0.0;
-    sourceChannels = 0;
-    loadedFilePath.clear();
+    {
+        const juce::SpinLock::ScopedLockType lock (sourceLock);
 
-    prepared[0] = PreparedData {};
-    prepared[1] = PreparedData {};
+        sourceData.clear();
+        sourceSampleRate = 0.0;
+        sourceChannels = 0;
+        loadedFilePath.clear();
+    }
 
     playing.store (false, std::memory_order_relaxed);
     position.store (0, std::memory_order_relaxed);
     pendingPositionSeconds.store (-1.0, std::memory_order_relaxed);
+
+    // The audio thread may still be reading the prepared buffer, so leave
+    // the slots intact and only mark them unavailable.
     prepareReady.store (false, std::memory_order_release);
 }
 
@@ -99,11 +111,16 @@ void PlaybackProcessor::setPositionSeconds (double seconds) noexcept
 
 std::int64_t PlaybackProcessor::getLengthFrames() const noexcept
 {
-    return prepared[activeIndex.load (std::memory_order_acquire)].frames;
+    return prepareReady.load (std::memory_order_acquire)
+             ? prepared[activeIndex.load (std::memory_order_acquire)].frames
+             : 0;
 }
 
 double PlaybackProcessor::getPositionSeconds() const noexcept
 {
+    if (!prepareReady.load (std::memory_order_acquire))
+        return 0.0;
+
     const auto& active = prepared[activeIndex.load (std::memory_order_acquire)];
 
     return active.sampleRate > 0.0
@@ -113,6 +130,9 @@ double PlaybackProcessor::getPositionSeconds() const noexcept
 
 double PlaybackProcessor::getLengthSeconds() const noexcept
 {
+    if (!prepareReady.load (std::memory_order_acquire))
+        return 0.0;
+
     const auto& active = prepared[activeIndex.load (std::memory_order_acquire)];
 
     return active.sampleRate > 0.0
@@ -122,33 +142,58 @@ double PlaybackProcessor::getLengthSeconds() const noexcept
 
 const float* PlaybackProcessor::getPreparedData() const noexcept
 {
+    if (!prepareReady.load (std::memory_order_acquire))
+        return nullptr;
+
     const auto& active = prepared[activeIndex.load (std::memory_order_acquire)];
     return active.data.empty() ? nullptr : active.data.data();
 }
 
 std::int64_t PlaybackProcessor::getPreparedFrames() const noexcept
 {
-    return prepared[activeIndex.load (std::memory_order_acquire)].frames;
+    return prepareReady.load (std::memory_order_acquire)
+             ? prepared[activeIndex.load (std::memory_order_acquire)].frames
+             : 0;
 }
 
 int PlaybackProcessor::getPreparedChannels() const noexcept
 {
-    return prepared[activeIndex.load (std::memory_order_acquire)].channels;
+    return prepareReady.load (std::memory_order_acquire)
+             ? prepared[activeIndex.load (std::memory_order_acquire)].channels
+             : 0;
 }
 
 std::int64_t PlaybackProcessor::getSourceFrames() const noexcept
 {
+    const juce::SpinLock::ScopedLockType lock (sourceLock);
+
     return sourceChannels > 0 ? static_cast<std::int64_t> (sourceData.size()) / sourceChannels : 0;
 }
 
-void PlaybackProcessor::prepare (double sampleRate, int) noexcept
+int PlaybackProcessor::getSourceChannels() const noexcept
+{
+    const juce::SpinLock::ScopedLockType lock (sourceLock);
+    return sourceChannels;
+}
+
+void PlaybackProcessor::prepare (double sampleRate, int bufferSize) noexcept
 {
     numChannels = maxChannels;
 
-    if (sourceData.empty() || sourceChannels <= 0 || sampleRate <= 0.0)
+    if (sampleRate > 0.0)
     {
-        prepareReady.store (false, std::memory_order_release);
-        return;
+        configuredSampleRate = sampleRate;
+        configuredBufferSize = bufferSize;
+    }
+
+    {
+        const juce::SpinLock::ScopedLockType lock (sourceLock);
+
+        if (sourceData.empty() || sourceChannels <= 0 || sampleRate <= 0.0)
+        {
+            prepareReady.store (false, std::memory_order_release);
+            return;
+        }
     }
 
     if (prepareReady.load (std::memory_order_acquire)
@@ -172,29 +217,41 @@ bool PlaybackProcessor::buildPendingPreparation()
 
     const double targetRate = targetSampleRate.load (std::memory_order_relaxed);
 
-    if (sourceData.empty() || sourceChannels <= 0 || targetRate <= 0.0)
-        return false;
+    std::vector<float> source;
+    double sourceRate = 0.0;
+    int sourceChannelCount = 0;
 
-    const std::int64_t sourceFrames = static_cast<std::int64_t> (sourceData.size()) / sourceChannels;
-    const double ratio = sourceSampleRate / targetRate;
+    {
+        const juce::SpinLock::ScopedLockType lock (sourceLock);
+
+        if (sourceData.empty() || sourceChannels <= 0 || targetRate <= 0.0)
+            return false;
+
+        source = sourceData;
+        sourceRate = sourceSampleRate;
+        sourceChannelCount = sourceChannels;
+    }
+
+    const std::int64_t sourceFrames = static_cast<std::int64_t> (source.size()) / sourceChannelCount;
+    const double ratio = sourceRate / targetRate;
     const auto targetFrames = std::max<std::int64_t> (1, static_cast<std::int64_t> (std::llround (sourceFrames / ratio)));
 
-    std::vector<float> resampled (static_cast<size_t> (targetFrames * sourceChannels), 0.0f);
+    std::vector<float> resampled (static_cast<size_t> (targetFrames * sourceChannelCount), 0.0f);
     juce::CatmullRomInterpolator interpolator;
 
-    for (int channel = 0; channel < sourceChannels; ++channel)
+    for (int channel = 0; channel < sourceChannelCount; ++channel)
     {
         std::vector<float> channelInput (static_cast<size_t> (sourceFrames), 0.0f);
 
         for (std::int64_t frame = 0; frame < sourceFrames; ++frame)
-            channelInput[static_cast<size_t> (frame)] = sourceData[static_cast<size_t> (frame * sourceChannels + channel)];
+            channelInput[static_cast<size_t> (frame)] = source[static_cast<size_t> (frame * sourceChannelCount + channel)];
 
         std::vector<float> channelOutput (static_cast<size_t> (targetFrames), 0.0f);
 
         interpolator.process (ratio, channelInput.data(), channelOutput.data(), static_cast<int> (targetFrames));
 
         for (std::int64_t frame = 0; frame < targetFrames; ++frame)
-            resampled[static_cast<size_t> (frame * sourceChannels + channel)] = channelOutput[static_cast<size_t> (frame)];
+            resampled[static_cast<size_t> (frame * sourceChannelCount + channel)] = channelOutput[static_cast<size_t> (frame)];
     }
 
     const int inactive = 1 - activeIndex.load (std::memory_order_relaxed);
@@ -202,7 +259,7 @@ bool PlaybackProcessor::buildPendingPreparation()
     auto& slot = prepared[inactive];
     slot.data = std::move (resampled);
     slot.frames = targetFrames;
-    slot.channels = sourceChannels;
+    slot.channels = sourceChannelCount;
     slot.sampleRate = targetRate;
 
     const double pendingSeconds = pendingPositionSeconds.load (std::memory_order_relaxed);

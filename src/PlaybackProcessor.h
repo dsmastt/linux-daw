@@ -20,7 +20,11 @@ public:
     juce::String loadFile (const juce::File& file);
     void clearFile() noexcept;
 
-    juce::String getLoadedFilePath() const noexcept { return loadedFilePath; }
+    juce::String getLoadedFilePath() const noexcept
+    {
+        const juce::SpinLock::ScopedLockType lock (sourceLock);
+        return loadedFilePath;
+    }
 
     void play() noexcept;
     void pause() noexcept;
@@ -43,7 +47,7 @@ public:
 
     const float* getSourceData() const noexcept { return sourceData.empty() ? nullptr : sourceData.data(); }
     std::int64_t getSourceFrames() const noexcept;
-    int getSourceChannels() const noexcept { return sourceChannels; }
+    int getSourceChannels() const noexcept;
 
     void prepare (double sampleRate, int bufferSize) noexcept override;
     void process (float* const* channels, int numChannels, int numSamples) noexcept override;
@@ -77,6 +81,7 @@ private:
     bool buildPendingPreparation();
 
     std::vector<float> sourceData;
+    mutable juce::SpinLock sourceLock;
     double sourceSampleRate = 0.0;
     int sourceChannels = 0;
     juce::String loadedFilePath;
@@ -93,6 +98,8 @@ private:
     std::atomic<std::int64_t> position { 0 };
     std::atomic<double> pendingPositionSeconds { -1.0 };
 
+    double configuredSampleRate = 0.0;
+    int configuredBufferSize = 0;
     int numChannels = 0;
 };
 } // namespace daw

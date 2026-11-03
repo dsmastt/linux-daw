@@ -41,15 +41,18 @@ set(CORE_SOURCES
     src/ConvolutionProcessor.cpp
     src/DistortionProcessor.cpp
     src/GainProcessor.cpp
+    src/Metronome.cpp
     src/MidiInputHandler.cpp
     src/NoiseGateProcessor.cpp
     src/ParametricEqProcessor.cpp
     src/PlaybackProcessor.cpp
+    src/Preset.cpp
     src/ProcessorChain.cpp
     src/Project.cpp
     src/ReverbProcessor.cpp
     src/Track.cpp
     src/Transport.cpp
+    src/Tuner.cpp
     src/UndoManager.cpp
     src/Vst3HostProcessor.cpp)
 
@@ -68,8 +71,10 @@ target_sources(linux-daw PRIVATE
     src/MeterComponent.cpp
     src/MidiComponent.cpp
     src/MixerComponent.cpp
+    src/PresetComponent.cpp
     src/ProcessorControlsComponent.cpp
     src/TimelineComponent.cpp
+    src/TunerComponent.cpp
     ${CORE_SOURCES})
 
 target_compile_features(linux-daw PRIVATE cxx_std_20)

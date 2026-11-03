@@ -11,8 +11,21 @@ juce::String Vst3HostProcessor::loadPlugin (const juce::PluginDescription& descr
     juce::AudioPluginFormatManager formatManager;
     juce::addDefaultFormatsToManager (formatManager);
 
-    const double rate = sampleRateToUse > 0.0 ? sampleRateToUse : 48000.0;
-    const int buffer = bufferSizeToUse > 0 ? bufferSizeToUse : 512;
+    double rate = sampleRateToUse > 0.0 ? sampleRateToUse : 48000.0;
+    int buffer = bufferSizeToUse > 0 ? bufferSizeToUse : 512;
+
+    // If the engine has already been prepared, use its actual format. This
+    // matters when a project is loaded while audio is running, since the
+    // project itself does not know the device's current sample rate.
+    {
+        const juce::SpinLock::ScopedLockType lock (instanceLock);
+
+        if (sampleRate > 0.0)
+            rate = sampleRate;
+
+        if (bufferSize > 0)
+            buffer = bufferSize;
+    }
 
     juce::String error;
     auto plugin = formatManager.createPluginInstance (description, rate, buffer, error);
@@ -20,28 +33,55 @@ juce::String Vst3HostProcessor::loadPlugin (const juce::PluginDescription& descr
     if (plugin == nullptr)
         return error.isEmpty() ? juce::String ("Unknown error loading plugin") : error;
 
-    instance = std::move (plugin);
-    pluginName = instance->getName();
-    pluginDescription = description;
-    sampleRate = rate;
-    bufferSize = buffer;
+    // The plugin must be prepared before the audio thread can see it,
+    // otherwise its processBlock() calls are ignored by JUCE.
+    try
+    {
+        plugin->prepareToPlay (rate, buffer);
+        plugin->reset();
+    }
+    catch (...)
+    {
+        return "Could not prepare plugin for playback";
+    }
 
-    loaded.store (true, std::memory_order_release);
+    {
+        const juce::SpinLock::ScopedLockType lock (instanceLock);
+
+        instance = std::move (plugin);
+        pluginName = instance->getName();
+        pluginDescription = description;
+        sampleRate = rate;
+        bufferSize = buffer;
+
+        loaded.store (true, std::memory_order_release);
+    }
 
     return {};
 }
 
 void Vst3HostProcessor::unloadPlugin() noexcept
 {
-    loaded.store (false, std::memory_order_release);
-    bypassed.store (false, std::memory_order_relaxed);
-    failed.store (false, std::memory_order_relaxed);
-    instance.reset();
-    pluginName.clear();
+    std::unique_ptr<juce::AudioPluginInstance> oldInstance;
+
+    {
+        const juce::SpinLock::ScopedLockType lock (instanceLock);
+
+        loaded.store (false, std::memory_order_release);
+        setBypassed (false);
+        failed.store (false, std::memory_order_relaxed);
+
+        oldInstance = std::move (instance);
+        pluginName.clear();
+    }
+
+    // Destroy the instance outside the lock; plugin teardown can be slow.
 }
 
 void Vst3HostProcessor::prepare (double sampleRateToUse, int bufferSizeToUse) noexcept
 {
+    const juce::SpinLock::ScopedLockType lock (instanceLock);
+
     sampleRate = sampleRateToUse;
     bufferSize = bufferSizeToUse;
 
@@ -54,13 +94,24 @@ void Vst3HostProcessor::prepare (double sampleRateToUse, int bufferSizeToUse) no
 
 void Vst3HostProcessor::reset() noexcept
 {
+    const juce::SpinLock::ScopedLockType lock (instanceLock);
+
     if (loaded.load() && instance != nullptr)
         instance->reset();
 }
 
 void Vst3HostProcessor::process (float* const* channels, int numChannels, int numSamples) noexcept
 {
-    if (!loaded.load() || instance == nullptr || bypassed.load() || failed.load())
+    if (!loaded.load (std::memory_order_acquire))
+        return;
+
+    const juce::SpinLock::ScopedTryLockType lock (instanceLock);
+
+    if (!lock.isLocked())
+        return;
+
+    if (!loaded.load (std::memory_order_relaxed) || instance == nullptr
+        || isBypassed() || failed.load())
         return;
 
     pluginBuffer.setDataToReferTo (channels, numChannels, numSamples);
@@ -78,7 +129,16 @@ void Vst3HostProcessor::process (float* const* channels, int numChannels, int nu
 
 void Vst3HostProcessor::processWithMidi (float* const* channels, int numChannels, int numSamples, juce::MidiBuffer& midiEvents) noexcept
 {
-    if (!loaded.load() || instance == nullptr || bypassed.load() || failed.load())
+    if (!loaded.load (std::memory_order_acquire))
+        return;
+
+    const juce::SpinLock::ScopedTryLockType lock (instanceLock);
+
+    if (!lock.isLocked())
+        return;
+
+    if (!loaded.load (std::memory_order_relaxed) || instance == nullptr
+        || isBypassed() || failed.load())
         return;
 
     pluginBuffer.setDataToReferTo (channels, numChannels, numSamples);

@@ -6,6 +6,7 @@
 #include <juce_core/juce_core.h>
 
 #include "DistortionShaper.h"
+#include "Metronome.h"
 #include "Track.h"
 #include "Transport.h"
 
@@ -88,6 +89,12 @@ public:
     bool isVst3PluginBypassed() const noexcept;
     juce::AudioPluginInstance* getVst3PluginInstance() const noexcept;
 
+    void setProcessorBypassed (ProcessorSlot slot, bool shouldBeBypassed) noexcept;
+    bool isProcessorBypassed (ProcessorSlot slot) const noexcept;
+
+    double getPreparedSampleRate() const noexcept { return preparedSampleRate; }
+    int getPreparedBufferSize() const noexcept { return preparedBufferSize; }
+
     // Playback (graph-level, mixed into the master output).
     juce::String loadPlaybackFile (const juce::File& file);
     juce::String getPlaybackFilePath() const noexcept;
@@ -102,6 +109,9 @@ public:
     std::int64_t getPlaybackSourceFrames() const noexcept;
     int getPlaybackSourceChannels() const noexcept;
     void setPlaybackPositionSeconds (double seconds) noexcept;
+
+    Metronome& getMetronome() noexcept { return metronome; }
+    const Metronome& getMetronome() const noexcept { return metronome; }
 
     // Transport.
     Transport& getTransport() noexcept { return transport; }
@@ -129,8 +139,11 @@ public:
 private:
     std::vector<std::unique_ptr<Track>> tracks;
     std::unique_ptr<PlaybackProcessor> playbackProcessor;
+    Metronome metronome;
     Transport transport;
     std::vector<std::vector<float>> busBuffers[numBuses];
     std::atomic<bool> forceMonoInput { false };
+    double preparedSampleRate = 48000.0;
+    int preparedBufferSize = 128;
 };
 } // namespace daw

@@ -9,7 +9,7 @@
 
 namespace daw
 {
-class ProcessorControlsComponent final : public juce::Component
+class ProcessorControlsComponent final : public juce::Component, public juce::ChangeListener
 {
 public:
     class SliderRow final : public juce::Component
@@ -33,9 +33,9 @@ public:
 
     void resized() override;
     void refreshFromGraph();
+    void changeListenerCallback (juce::ChangeBroadcaster* source) override;
 
 private:
-    static void layoutRows (juce::Component& parent, const std::vector<std::unique_ptr<SliderRow>>& rows);
 
     template <typename Tab>
     void wireUndoTab (Tab& tab)
@@ -52,6 +52,7 @@ private:
         void refreshFromGraph();
 
         std::vector<std::unique_ptr<SliderRow>> rows;
+        juce::ToggleButton bypassButton;
 
     private:
         AudioGraph& graph;
@@ -65,6 +66,7 @@ private:
         void refreshFromGraph();
 
         std::vector<std::unique_ptr<SliderRow>> rows;
+        juce::ToggleButton bypassButton;
 
     private:
         AudioGraph& graph;
@@ -78,6 +80,7 @@ private:
         void refreshFromGraph();
 
         std::vector<std::unique_ptr<SliderRow>> rows;
+        juce::ToggleButton bypassButton;
 
     private:
         AudioGraph& graph;
@@ -91,6 +94,7 @@ private:
         void refreshFromGraph();
 
         std::vector<std::unique_ptr<SliderRow>> rows;
+        juce::ToggleButton bypassButton;
 
     private:
         AudioGraph& graph;
@@ -104,6 +108,7 @@ private:
         void refreshFromGraph();
 
         std::vector<std::unique_ptr<SliderRow>> rows;
+        juce::ToggleButton bypassButton;
 
     private:
         AudioGraph& graph;
@@ -116,6 +121,9 @@ private:
     public:
         explicit CabinetTab (AudioGraph& graph, UndoManager& undoToUse);
         void resized() override;
+        void refreshFromGraph();
+
+        juce::ToggleButton bypassButton;
 
     private:
         AudioGraph& graph;
@@ -133,6 +141,7 @@ private:
         void refreshFromGraph();
 
         std::vector<std::unique_ptr<SliderRow>> rows;
+        juce::ToggleButton bypassButton;
 
     private:
         AudioGraph& graph;
@@ -145,6 +154,7 @@ private:
         ~PluginTab() override;
         void resized() override;
         void refreshFromGraph();
+        void scanPluginsIfNeeded();
 
     private:
         class EditorWindow;
@@ -172,6 +182,7 @@ private:
         std::vector<juce::Label*> parameterLabels;
         std::vector<juce::PluginDescription> scannedPlugins;
         std::unique_ptr<EditorWindow> editorWindow;
+        bool scanStarted = false;
     };
 
     juce::TabbedComponent tabs;

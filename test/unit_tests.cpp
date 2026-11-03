@@ -9,10 +9,14 @@
 #include "CompressorProcessor.h"
 #include "DistortionProcessor.h"
 #include "GainProcessor.h"
+#include "Metronome.h"
 #include "NoiseGateProcessor.h"
 #include "ParametricEqProcessor.h"
+#include "Preset.h"
+#include "ProcessorChain.h"
 #include "Project.h"
 #include "ReverbProcessor.h"
+#include "Tuner.h"
 #include "Track.h"
 #include "Transport.h"
 
@@ -396,6 +400,170 @@ void testMonoInputSpread()
     graph.setForceMonoInput (false);
 }
 
+void testProcessorBypass()
+{
+    daw::ProcessorChain chain;
+    auto gain = std::make_unique<daw::GainProcessor>();
+    gain->setGainDb (-60.0f);
+    chain.append (std::move (gain));
+    chain.prepare (48000.0, 1024);
+
+    juce::AudioBuffer<float> buffer (1, 1024);
+    fillSine (buffer, 440.0, 48000.0, 0.5f);
+
+    juce::AudioBuffer<float> bypassed (1, 1024);
+    bypassed.makeCopyOf (buffer);
+    chain.setProcessorBypassed (0, true);
+    float* bypassedPointers[] = { bypassed.getWritePointer (0) };
+    chain.process (bypassedPointers, 1, 1024);
+    CHECK (std::abs (peakOf (bypassed) - 0.5f) < 0.01f);
+
+    juce::AudioBuffer<float> active (1, 1024);
+    active.makeCopyOf (buffer);
+    chain.setProcessorBypassed (0, false);
+    chain.reset();
+    float* activePointers[] = { active.getWritePointer (0) };
+    chain.process (activePointers, 1, 1024);
+    CHECK (peakOf (active) < 0.001f);
+}
+
+void testTuner()
+{
+    daw::Tuner tuner;
+
+    constexpr double sampleRate = 48000.0;
+    std::vector<float> samples (8192);
+
+    for (size_t i = 0; i < samples.size(); ++i)
+        samples[i] = 0.2f * std::sin (2.0f * 3.14159265358979323846f * 440.0f
+                                      * static_cast<float> (i) / static_cast<float> (sampleRate));
+
+    tuner.pushSamples (samples.data(), static_cast<int> (samples.size()));
+
+    const auto reading = tuner.analyse (sampleRate);
+    CHECK (reading.hasSignal);
+    CHECK (std::abs (reading.frequencyHz - 440.0f) < 3.0f);
+
+    float cents = 0.0f;
+    int octave = 0;
+    CHECK (daw::Tuner::getNoteName (reading.frequencyHz, cents, octave) == "A");
+    CHECK (octave == 4);
+    CHECK (std::abs (cents) < 10.0f);
+}
+
+void testMetronome()
+{
+    daw::Metronome metronome;
+    metronome.prepare (48000.0);
+    metronome.setEnabled (true);
+    metronome.setVolume (0.5f);
+
+    constexpr int numSamples = 48000;
+    std::vector<float> left (numSamples, 0.0f);
+    std::vector<float> right (numSamples, 0.0f);
+    float* channels[] = { left.data(), right.data() };
+
+    metronome.process (channels, 2, numSamples, 0, true, 120.0);
+
+    float firstClick = 0.0f;
+    float secondClick = 0.0f;
+    float silence = 0.0f;
+
+    for (int i = 0; i < 200; ++i)
+        firstClick = std::max (firstClick, std::abs (left[static_cast<size_t> (i)]));
+
+    for (int i = 10000; i < 20000; ++i)
+        silence = std::max (silence, std::abs (left[static_cast<size_t> (i)]));
+
+    for (int i = 24000; i < 24200; ++i)
+        secondClick = std::max (secondClick, std::abs (left[static_cast<size_t> (i)]));
+
+    CHECK (firstClick > 0.05f);
+    CHECK (secondClick > 0.05f);
+    CHECK (silence < 0.001f);
+    CHECK (std::abs (left[0] - right[0]) < 1.0e-9f);
+}
+
+void testMetronomeThroughGraph()
+{
+    daw::AudioGraph graph;
+    graph.prepare (48000.0, 256);
+    graph.reset();
+    graph.getTransport().setTempoBpm (120.0);
+    graph.getMetronome().setEnabled (true);
+    graph.getMetronome().setVolume (0.5f);
+    graph.playTransport();
+
+    constexpr int blockSize = 256;
+    constexpr int totalSamples = 256 * 188;
+    std::vector<float> inputLeft (blockSize, 0.0f);
+    std::vector<float> inputRight (blockSize, 0.0f);
+    std::vector<float> outputLeft (totalSamples, 0.0f);
+    std::vector<float> outputRight (totalSamples, 0.0f);
+    std::vector<float> blockLeft (blockSize, 0.0f);
+    std::vector<float> blockRight (blockSize, 0.0f);
+    const float* input[] = { inputLeft.data(), inputRight.data() };
+    float* output[] = { blockLeft.data(), blockRight.data() };
+    juce::MidiBuffer midi;
+
+    for (int offset = 0; offset < totalSamples; offset += blockSize)
+    {
+        graph.processWithInput (input, output, 2, blockSize, midi);
+
+        for (int i = 0; i < blockSize; ++i)
+        {
+            outputLeft[static_cast<size_t> (offset + i)] = blockLeft[static_cast<size_t> (i)];
+            outputRight[static_cast<size_t> (offset + i)] = blockRight[static_cast<size_t> (i)];
+        }
+    }
+
+    float firstClick = 0.0f;
+    float secondClick = 0.0f;
+
+    for (int i = 0; i < 200; ++i)
+        firstClick = std::max (firstClick, std::abs (outputLeft[static_cast<size_t> (i)]));
+
+    for (int i = 24000; i < 24200; ++i)
+        secondClick = std::max (secondClick, std::abs (outputLeft[static_cast<size_t> (i)]));
+
+    CHECK (firstClick > 0.05f);
+    CHECK (secondClick > 0.05f);
+}
+
+void testPresetRoundTrip()
+{
+    daw::AudioGraph graph;
+
+    graph.getTrack (0).setGainDb (3.5f);
+    graph.getTrack (0).setGateThresholdDb (-42.0f);
+    graph.getTrack (0).setEqBandParameters (1, 1200.0, 4.0f, 1.5f);
+    graph.getTrack (0).setCompressorRatio (7.0f);
+    graph.getTrack (0).setDistortionDriveDb (18.0f);
+    graph.getTrack (0).setReverbWetDry (0.45f);
+    graph.getTrack (0).setProcessorBypassed (daw::ProcessorSlot::gate, true);
+    graph.getTrack (0).setProcessorBypassed (daw::ProcessorSlot::reverb, true);
+
+    const auto file = juce::File ("/tmp/kilo/linux-daw-unit-preset.ldpreset");
+    const auto saveError = daw::Preset::save (file, graph);
+    CHECK (saveError.isEmpty());
+
+    daw::AudioGraph loaded;
+    const auto loadError = daw::Preset::load (file, loaded);
+    CHECK (loadError.isEmpty());
+
+    CHECK (std::abs (loaded.getTrack (0).getGainDb() - 3.5f) < 0.001f);
+    CHECK (std::abs (loaded.getTrack (0).getGateThresholdDb() + 42.0f) < 0.001f);
+    CHECK (std::abs (loaded.getTrack (0).getEqBandFrequency (1) - 1200.0) < 0.001);
+    CHECK (std::abs (loaded.getTrack (0).getCompressorRatio() - 7.0f) < 0.001f);
+    CHECK (std::abs (loaded.getTrack (0).getDistortionDriveDb() - 18.0f) < 0.001f);
+    CHECK (std::abs (loaded.getTrack (0).getReverbWetDry() - 0.45f) < 0.001f);
+    CHECK (loaded.getTrack (0).isProcessorBypassed (daw::ProcessorSlot::gate));
+    CHECK (loaded.getTrack (0).isProcessorBypassed (daw::ProcessorSlot::reverb));
+    CHECK (! loaded.getTrack (0).isProcessorBypassed (daw::ProcessorSlot::distortion));
+
+    file.deleteFile();
+}
+
 void testProjectRoundTrip()
 {
     daw::AudioGraph graph;
@@ -450,6 +618,11 @@ int main (int argc, char* argv[])
     testRoutingOffline();
     testMidiEmission();
     testMonoInputSpread();
+    testProcessorBypass();
+    testTuner();
+    testMetronome();
+    testMetronomeThroughGraph();
+    testPresetRoundTrip();
     testProjectRoundTrip();
 
     std::cout << checks << " checks, " << failures << " failures" << std::endl;

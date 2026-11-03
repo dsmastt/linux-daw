@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
 
@@ -16,6 +18,16 @@ public:
     virtual void process (float* const* channels, int numChannels, int numSamples) noexcept = 0;
     virtual void reset() noexcept = 0;
 
+    void setBypassed (bool shouldBeBypassed) noexcept
+    {
+        bypassed.store (shouldBeBypassed, std::memory_order_relaxed);
+    }
+
+    bool isBypassed() const noexcept
+    {
+        return bypassed.load (std::memory_order_relaxed);
+    }
+
     virtual void processWithMidi (float* const* channels,
                                   int numChannels,
                                   int numSamples,
@@ -24,5 +36,8 @@ public:
         juce::ignoreUnused (midiEvents);
         process (channels, numChannels, numSamples);
     }
+
+protected:
+    std::atomic<bool> bypassed { false };
 };
 } // namespace daw

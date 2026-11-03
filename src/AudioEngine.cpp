@@ -3,10 +3,25 @@
 #include <algorithm>
 #include <chrono>
 
+#include <pthread.h>
+#include <sched.h>
+
 #include "AtomicHelpers.h"
 
 namespace daw
 {
+namespace
+{
+void tryEnableRealtimeScheduling() noexcept
+{
+    sched_param params {};
+    params.sched_priority = 70;
+
+    // Best effort: this requires CAP_SYS_NICE, rtprio limits or a running
+    // rtkit daemon. If it fails the engine still runs at normal priority.
+    pthread_setschedparam (pthread_self(), SCHED_FIFO, &params);
+}
+} // namespace
 
 AudioEngine::~AudioEngine()
 {
@@ -46,6 +61,7 @@ void AudioEngine::stop()
     }
 
     running.store (false);
+    tuner.reset();
     sampleRate.store (0.0);
     bufferSize.store (0);
     inputLatencySamples.store (0);
@@ -93,6 +109,12 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
                                                     int numSamples,
                                                     const juce::AudioIODeviceCallbackContext&)
 {
+    static std::atomic<bool> realtimeSchedulingAttempted { false };
+
+    if (! realtimeSchedulingAttempted.exchange (true, std::memory_order_relaxed))
+        tryEnableRealtimeScheduling();
+
+    const juce::ScopedNoDenormals noDenormals;
     const auto startTime = std::chrono::steady_clock::now();
 
     recorder.recordBlock (inputChannelData,
@@ -107,6 +129,9 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
                                            juce::FloatVectorOperations::findMinAndMax (inputChannelData[i], numSamples).getEnd());
 
     updateAtomicMax (inputPeak, inputPeakThisBlock);
+
+    if (inputChannelData != nullptr && numInputChannelsIn > 0 && inputChannelData[0] != nullptr)
+        tuner.pushSamples (inputChannelData[0], numSamples);
 
     midiBuffer.clear();
     midiHandler.drainInto (midiBuffer);
@@ -152,6 +177,10 @@ void AudioEngine::audioDeviceAboutToStart (juce::AudioIODevice* device)
 
     audioGraph.prepare (device->getCurrentSampleRate(), device->getCurrentBufferSizeSamples());
     audioGraph.reset();
+
+    // Do not count one-off device/plugin activation work as an audio
+    // callback overrun.
+    maxCallbackTimeMs.store (0.0, std::memory_order_relaxed);
 
     midiBuffer.ensureSize (2048);
 }

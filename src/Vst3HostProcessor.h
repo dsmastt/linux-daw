@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 
+#include <juce_core/juce_core.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include "AudioProcessor.h"
@@ -18,12 +19,18 @@ public:
     void unloadPlugin() noexcept;
 
     bool isLoaded() const noexcept { return loaded.load(); }
-    juce::String getPluginName() const noexcept { return pluginName; }
-    juce::PluginDescription getPluginDescription() const noexcept { return pluginDescription; }
-    bool hasFailed() const noexcept { return failed.load(); }
+    juce::String getPluginName() const noexcept
+    {
+        const juce::SpinLock::ScopedLockType lock (instanceLock);
+        return pluginName;
+    }
 
-    void setBypassed (bool shouldBeBypassed) noexcept { bypassed.store (shouldBeBypassed); }
-    bool isBypassed() const noexcept { return bypassed.load(); }
+    juce::PluginDescription getPluginDescription() const noexcept
+    {
+        const juce::SpinLock::ScopedLockType lock (instanceLock);
+        return pluginDescription;
+    }
+    bool hasFailed() const noexcept { return failed.load(); }
 
     juce::AudioPluginInstance* getInstance() const noexcept { return instance.get(); }
 
@@ -34,11 +41,16 @@ public:
 
 private:
     std::atomic<bool> loaded { false };
-    std::atomic<bool> bypassed { false };
     std::atomic<bool> failed { false };
     juce::String pluginName;
     juce::PluginDescription pluginDescription;
     std::unique_ptr<juce::AudioPluginInstance> instance;
+
+    // Guards instance against the audio thread while a plugin is being
+    // loaded or unloaded. The audio thread only try-locks, so it never
+    // blocks; it simply bypasses the plugin for that block.
+    mutable juce::SpinLock instanceLock;
+
     juce::AudioBuffer<float> pluginBuffer;
     juce::MidiBuffer midiBuffer;
     double sampleRate = 0.0;

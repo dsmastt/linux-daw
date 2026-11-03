@@ -52,6 +52,9 @@ void ProcessorChain::process (float* const* channels, int numChannels, int numSa
 {
     for (size_t i = 0; i < processors.size(); ++i)
     {
+        if (processors[i]->isBypassed())
+            continue;
+
         const auto startTime = std::chrono::steady_clock::now();
 
         processors[i]->process (channels, numChannels, numSamples);
@@ -70,6 +73,9 @@ void ProcessorChain::processWithMidi (float* const* channels, int numChannels, i
 {
     for (size_t i = 0; i < processors.size(); ++i)
     {
+        if (processors[i]->isBypassed())
+            continue;
+
         const auto startTime = std::chrono::steady_clock::now();
 
         processors[i]->processWithMidi (channels, numChannels, numSamples, midiEvents);
@@ -88,5 +94,23 @@ void ProcessorChain::reset() noexcept
 {
     for (const auto& processor : processors)
         processor->reset();
+}
+
+void ProcessorChain::setProcessorBypassed (int index, bool shouldBeBypassed) noexcept
+{
+    if (index >= 0 && index < static_cast<int> (processors.size()))
+        processors[static_cast<size_t> (index)]->setBypassed (shouldBeBypassed);
+}
+
+bool ProcessorChain::isProcessorBypassed (int index) const noexcept
+{
+    return index >= 0 && index < static_cast<int> (processors.size())
+             && processors[static_cast<size_t> (index)]->isBypassed();
+}
+
+void ProcessorChain::clearBypasses() noexcept
+{
+    for (auto& processor : processors)
+        processor->setBypassed (false);
 }
 } // namespace daw

@@ -24,14 +24,22 @@ juce::String ConvolutionProcessor::loadImpulseResponse (const juce::File& file)
     std::vector<float> loaded (static_cast<size_t> (reader->lengthInSamples));
     std::copy_n (buffer.getReadPointer (0), loaded.size(), loaded.begin());
 
-    impulseResponse = std::move (loaded);
-    impulseResponseSampleRate = reader->sampleRate;
-    impulseResponseFilePath = file.getFullPathName();
-    hasImpulseResponse_.store (true, std::memory_order_release);
+    // Stop using the old IR first. The prepared slots are left intact
+    // because the audio thread may still be reading them; they are replaced
+    // by the preparation thread after a complete new set has been built.
     prepareReady.store (false, std::memory_order_release);
 
-    prepared[0] = PreparedPartitions {};
-    prepared[1] = PreparedPartitions {};
+    {
+        const juce::SpinLock::ScopedLockType lock (impulseResponseLock);
+
+        impulseResponse = std::move (loaded);
+        impulseResponseSampleRate = reader->sampleRate;
+        impulseResponseFilePath = file.getFullPathName();
+        hasImpulseResponse_.store (true, std::memory_order_release);
+    }
+
+    if (configuredSampleRate > 0.0)
+        prepare (configuredSampleRate, configuredBufferSize);
 
     return {};
 }
@@ -39,28 +47,44 @@ juce::String ConvolutionProcessor::loadImpulseResponse (const juce::File& file)
 void ConvolutionProcessor::clearImpulseResponse()
 {
     hasImpulseResponse_.store (false, std::memory_order_release);
+    prepareReady.store (false, std::memory_order_release);
+
+    const juce::SpinLock::ScopedLockType lock (impulseResponseLock);
     impulseResponse.clear();
     impulseResponseSampleRate = 0.0;
     impulseResponseFilePath.clear();
-    prepareReady.store (false, std::memory_order_release);
-
-    prepared[0] = PreparedPartitions {};
-    prepared[1] = PreparedPartitions {};
 }
 
 int ConvolutionProcessor::getImpulseResponseLength() const noexcept
 {
-    const auto& active = prepared[activeIndex.load (std::memory_order_acquire)];
+    if (prepareReady.load (std::memory_order_acquire))
+    {
+        const auto& active = prepared[activeIndex.load (std::memory_order_acquire)];
 
-    return active.processedImpulseResponse.empty()
-             ? static_cast<int> (impulseResponse.size())
-             : static_cast<int> (active.processedImpulseResponse.size());
+        if (! active.processedImpulseResponse.empty())
+            return static_cast<int> (active.processedImpulseResponse.size());
+    }
+
+    const juce::SpinLock::ScopedLockType lock (impulseResponseLock);
+    return static_cast<int> (impulseResponse.size());
 }
 
 void ConvolutionProcessor::prepare (double sampleRate, int bufferSize) noexcept
 {
-    if (!hasImpulseResponse_.load (std::memory_order_acquire) || impulseResponse.empty()
-        || bufferSize <= 0 || sampleRate <= 0.0)
+    if (sampleRate > 0.0 && bufferSize > 0)
+    {
+        configuredSampleRate = sampleRate;
+        configuredBufferSize = bufferSize;
+    }
+
+    bool hasIr = false;
+
+    {
+        const juce::SpinLock::ScopedLockType lock (impulseResponseLock);
+        hasIr = hasImpulseResponse_.load (std::memory_order_acquire) && ! impulseResponse.empty();
+    }
+
+    if (! hasIr || bufferSize <= 0 || sampleRate <= 0.0)
     {
         prepareReady.store (false, std::memory_order_release);
         return;
@@ -98,9 +122,12 @@ bool ConvolutionProcessor::buildPendingPreparation()
     const double sampleRate = targetSampleRate.load (std::memory_order_relaxed);
     const int bufferSize = targetBufferSize.load (std::memory_order_relaxed);
 
-    if (!hasImpulseResponse_.load (std::memory_order_acquire) || impulseResponse.empty()
-        || bufferSize <= 0 || sampleRate <= 0.0)
-        return false;
+    {
+        const juce::SpinLock::ScopedLockType lock (impulseResponseLock);
+        if (! hasImpulseResponse_.load (std::memory_order_acquire) || impulseResponse.empty()
+            || bufferSize <= 0 || sampleRate <= 0.0)
+            return false;
+    }
 
     const int inactive = 1 - activeIndex.load (std::memory_order_relaxed);
 
@@ -108,6 +135,9 @@ bool ConvolutionProcessor::buildPendingPreparation()
     target = PreparedPartitions {};
 
     buildInto (target, sampleRate, bufferSize);
+
+    if (! hasImpulseResponse_.load (std::memory_order_acquire))
+        return false;
 
     activeIndex.store (inactive, std::memory_order_release);
     prepareReady.store (true, std::memory_order_release);
@@ -117,11 +147,18 @@ bool ConvolutionProcessor::buildPendingPreparation()
 
 void ConvolutionProcessor::buildInto (PreparedPartitions& target, double sampleRate, int bufferSize) noexcept
 {
-    std::vector<float> ir = impulseResponse;
+    std::vector<float> ir;
+    double irSampleRate = 0.0;
 
-    if (!juce::approximatelyEqual (impulseResponseSampleRate, sampleRate))
     {
-        const double ratio = impulseResponseSampleRate / sampleRate;
+        const juce::SpinLock::ScopedLockType lock (impulseResponseLock);
+        ir = impulseResponse;
+        irSampleRate = impulseResponseSampleRate;
+    }
+
+    if (!juce::approximatelyEqual (irSampleRate, sampleRate))
+    {
+        const double ratio = irSampleRate / sampleRate;
         const auto outLength = std::max<size_t> (1, static_cast<size_t> (std::llround (ir.size() / ratio)));
 
         std::vector<float> resampled (outLength);

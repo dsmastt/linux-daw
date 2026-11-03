@@ -24,6 +24,19 @@ constexpr int numBuses = 2;
 constexpr int maxChannels = 2;
 constexpr int maxBlockFrames = 2048;
 
+enum class ProcessorSlot
+{
+    gain = 0,
+    gate,
+    eq,
+    compressor,
+    distortion,
+    vst3,
+    convolution,
+    reverb,
+    count
+};
+
 struct RoutingBuffers
 {
     float* master[maxChannels] = {};
@@ -122,6 +135,9 @@ public:
     juce::AudioPluginInstance* getVst3PluginInstance() const noexcept;
 
     int getNumProcessors() const noexcept { return chain.size(); }
+
+    void setProcessorBypassed (ProcessorSlot slot, bool shouldBeBypassed) noexcept;
+    bool isProcessorBypassed (ProcessorSlot slot) const noexcept;
 
     int getMeasuredProcessorCount() const noexcept { return chain.getMeasuredProcessorCount(); }
     juce::String getProcessorName (int index) const noexcept { return chain.getProcessorName (index); }

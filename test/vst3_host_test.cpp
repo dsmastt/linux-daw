@@ -13,6 +13,7 @@
 
 #include "AudioEngine.h"
 #include "AudioGraph.h"
+#include "Preset.h"
 #include "Project.h"
 #include "UndoManager.h"
 #include "Vst3HostProcessor.h"
@@ -698,9 +699,39 @@ int runTest (const juce::ArgumentList& args)
 
     engine.closeMidiDevice();
 
+    // Preset round-trip test, including the hosted plugin state.
+    const auto presetFile = juce::File ("/tmp/kilo/linux-daw-test-preset.ldpreset");
+
+    if (auto* instance = graph.getVst3PluginInstance())
+        if (! instance->getParameters().isEmpty())
+            instance->getParameters().getUnchecked (0)->setValue (0.25f);
+
+    const auto presetSaveError = daw::Preset::save (presetFile, graph);
+
+    if (auto* instance = graph.getVst3PluginInstance())
+        if (! instance->getParameters().isEmpty())
+            instance->getParameters().getUnchecked (0)->setValue (0.75f);
+
+    const auto presetLoadError = daw::Preset::load (presetFile, graph);
+
+    float presetParameterValue = 0.0f;
+
+    if (auto* instance = graph.getVst3PluginInstance())
+        if (! instance->getParameters().isEmpty())
+            presetParameterValue = instance->getParameters().getUnchecked (0)->getValue();
+
+    const auto presetOk = presetSaveError.isEmpty()
+                          && presetLoadError.isEmpty()
+                          && std::abs (presetParameterValue - 0.25f) < 0.01f;
+
+    std::cout << "Preset round-trip: " << (presetOk ? "passed" : "failed")
+              << " (gain " << presetParameterValue << ")" << std::endl;
+
+    presetFile.deleteFile();
+
     if (callbacks == 0 || xruns != 0 || !transportOk || !clipsOk || !midiOk || !midiTrackOk
         || !volumeAutomationOk || !pluginAutomationOk || !roundTripOk || !undoOk1 || !undoOk2 || !redoOk
-        || !profilingOk || !irPreparedOk || !routingOk || !sendOk || !monoModeOk)
+        || !profilingOk || !irPreparedOk || !routingOk || !sendOk || !monoModeOk || !presetOk)
     {
         std::cout << "VST3 host test FAILED" << std::endl;
         return 1;

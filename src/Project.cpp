@@ -129,6 +129,13 @@ juce::var Project::trackToVar (const Track& track)
     gate->setProperty ("releaseMs", track.getGateReleaseMs());
     trackObject->setProperty ("gate", juce::var (gate.get()));
 
+    juce::Array<juce::var> bypasses;
+
+    for (int slot = 0; slot < static_cast<int> (ProcessorSlot::count); ++slot)
+        bypasses.add (track.isProcessorBypassed (static_cast<ProcessorSlot> (slot)));
+
+    trackObject->setProperty ("bypasses", bypasses);
+
     juce::Array<juce::var> eqBands;
 
     for (int band = 0; band < track.getNumEqBands(); ++band)
@@ -384,12 +391,18 @@ juce::String Project::applyTrack (const juce::var& trackVar, Track& track, doubl
                     const auto& parameters = instance->getParameters();
 
                     for (int p = 0; p < parameterValues.size() && p < parameters.size(); ++p)
-                        parameters.getUnchecked (p)->setValue (static_cast<float> (readNumber (parameterValues[p], "", 0.0)));
+                        parameters.getUnchecked (p)->setValue (static_cast<float> (readNumber (parameterValues[p], 0.0)));
                 }
             }
 
             track.setVst3PluginBypassed (readBool (plugin, "bypassed", false));
         }
+    }
+
+    if (const auto bypasses = trackVar["bypasses"]; bypasses.isArray())
+    {
+        for (int slot = 0; slot < bypasses.size() && slot < static_cast<int> (ProcessorSlot::count); ++slot)
+            track.setProcessorBypassed (static_cast<ProcessorSlot> (slot), static_cast<bool> (bypasses[slot]));
     }
 
     if (const auto clips = trackVar["clips"]; clips.isArray())

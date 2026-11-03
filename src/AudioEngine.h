@@ -8,6 +8,7 @@
 #include "AudioGraph.h"
 #include "AudioRecorder.h"
 #include "MidiInputHandler.h"
+#include "Tuner.h"
 
 namespace daw
 {
@@ -45,6 +46,8 @@ public:
     int getClipCount() const noexcept { return clipCounter.load(); }
 
     AudioGraph& getAudioGraph() noexcept { return audioGraph; }
+    Tuner& getTuner() noexcept { return tuner; }
+    const Tuner& getTuner() const noexcept { return tuner; }
 
     void setForceMonoInput (bool shouldForceMono) noexcept { audioGraph.setForceMonoInput (shouldForceMono); }
 
@@ -90,6 +93,7 @@ private:
     juce::AudioIODevice* currentDevice = nullptr;
     int callbacksSinceXRunCheck = 0;
     AudioGraph audioGraph;
+    Tuner tuner;
     AudioRecorder recorder;
     MidiInputHandler midiHandler;
     juce::MidiBuffer midiBuffer;
