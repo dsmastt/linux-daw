@@ -4,6 +4,7 @@
 
 #include "AudioEngine.h"
 #include "AudioGraph.h"
+#include "NeuralPreset.h"
 #include "UndoManager.h"
 #include "Vst3HostProcessor.h"
 
@@ -33,6 +34,7 @@ public:
 
     void resized() override;
     void refreshFromGraph();
+    void closePluginEditor();
     void changeListenerCallback (juce::ChangeBroadcaster* source) override;
 
 private:
@@ -155,6 +157,7 @@ private:
         void resized() override;
         void refreshFromGraph();
         void scanPluginsIfNeeded();
+        void closeEditor();
 
     private:
         class EditorWindow;
@@ -164,6 +167,10 @@ private:
         void removePlugin();
         void rebuildParameterSliders();
         void openEditor();
+        void loadNativePreset();
+        void chooseNamModel();
+        void chooseNamIr();
+        void updatePluginSpecificControls (bool forceRefresh);
 
         AudioEngine& engine;
         AudioGraph& graph;
@@ -175,12 +182,23 @@ private:
         juce::ToggleButton bypassButton;
         juce::TextButton editorButton;
         juce::TextEditor statusText;
+        juce::Label nativePresetLabel;
+        juce::ComboBox nativePresetCombo;
+        juce::TextButton nativePresetLoadButton;
+        juce::TextButton nativePresetRefreshButton;
+        juce::TextButton namModelButton;
+        juce::TextButton namIrButton;
+        juce::Label namPathLabel;
         juce::Viewport parameterViewport;
         juce::Component parameterPanel;
         juce::ThreadPool scanPool;
         std::vector<juce::Slider*> parameterSliders;
         std::vector<juce::Label*> parameterLabels;
         std::vector<juce::PluginDescription> scannedPlugins;
+        std::vector<NeuralPresetEntry> nativePresets;
+        juce::String loadedPluginName;
+        juce::String namModelWindowsPath;
+        juce::String namIrWindowsPath;
         std::unique_ptr<EditorWindow> editorWindow;
         bool scanStarted = false;
     };

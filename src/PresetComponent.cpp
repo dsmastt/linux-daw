@@ -6,10 +6,12 @@ namespace daw
 {
 PresetComponent::PresetComponent (AudioEngine& engineToUse,
                                   UndoManager& undoToUse,
-                                  std::function<void()> onPresetLoaded)
+                                  std::function<void()> onPresetLoaded,
+                                  std::function<void()> onPresetBeforeLoad)
     : engine (engineToUse),
       undo (undoToUse),
-      onLoaded (std::move (onPresetLoaded))
+      onLoaded (std::move (onPresetLoaded)),
+      onBeforeLoad (std::move (onPresetBeforeLoad))
 {
     titleLabel.setText ("DSP Presets", juce::dontSendNotification);
     titleLabel.setFont (juce::FontOptions{}.withHeight (20.0f).withStyle ("Bold"));
@@ -133,6 +135,9 @@ void PresetComponent::loadSelectedPreset()
 
     if (index < 0 || index >= presetFiles.size())
         return;
+
+    if (onBeforeLoad != nullptr)
+        onBeforeLoad();
 
     undo.captureUndoState (engine.getAudioGraph());
 

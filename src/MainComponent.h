@@ -30,6 +30,7 @@ public:
     UndoManager& getUndoManager() noexcept { return undoManager; }
 
     void refreshAfterUndoRedo();
+    void closePluginEditor();
 
 private:
     void refreshDevices();

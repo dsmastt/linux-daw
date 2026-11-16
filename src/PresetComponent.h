@@ -15,7 +15,8 @@ class PresetComponent final : public juce::Component
 public:
     PresetComponent (AudioEngine& engineToUse,
                      UndoManager& undoToUse,
-                     std::function<void()> onPresetLoaded);
+                     std::function<void()> onPresetLoaded,
+                     std::function<void()> onPresetBeforeLoad);
     ~PresetComponent() override = default;
 
     void resized() override;
@@ -31,6 +32,7 @@ private:
     AudioEngine& engine;
     UndoManager& undo;
     std::function<void()> onLoaded;
+    std::function<void()> onBeforeLoad;
 
     juce::Label titleLabel;
     juce::Label hintLabel;

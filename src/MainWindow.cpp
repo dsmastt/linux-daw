@@ -123,6 +123,8 @@ bool MainWindow::keyPressed (const juce::KeyPress& key)
 
 void MainWindow::undo()
 {
+    content.closePluginEditor();
+
     auto& undoManager = content.getUndoManager();
     const auto error = undoManager.undo (content.getEngine().getAudioGraph());
 
@@ -137,6 +139,8 @@ void MainWindow::undo()
 
 void MainWindow::redo()
 {
+    content.closePluginEditor();
+
     auto& undoManager = content.getUndoManager();
     const auto error = undoManager.redo (content.getEngine().getAudioGraph());
 
@@ -151,9 +155,11 @@ void MainWindow::redo()
 
 void MainWindow::newProject()
 {
+    content.closePluginEditor();
     content.getEngine().getAudioGraph().resetToDefaults();
     currentProjectFile = juce::File();
     setName ("Linux DAW");
+    content.refreshAfterUndoRedo();
 }
 
 void MainWindow::openProject()
@@ -170,6 +176,8 @@ void MainWindow::openProject()
                                   if (result == juce::File())
                                       return;
 
+                                  content.closePluginEditor();
+
                                   const auto error = Project::load (result, content.getEngine().getAudioGraph());
 
                                   if (error.isNotEmpty())
@@ -180,6 +188,7 @@ void MainWindow::openProject()
 
                                   currentProjectFile = result;
                                   setName ("Linux DAW - " + result.getFileName());
+                                  content.refreshAfterUndoRedo();
                               });
                           });
 }
@@ -229,6 +238,7 @@ void MainWindow::saveProjectAs()
 
                                   currentProjectFile = result;
                                   setName ("Linux DAW - " + result.getFileName());
+                                  content.refreshAfterUndoRedo();
                               });
                           });
 }

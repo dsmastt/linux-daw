@@ -1,5 +1,7 @@
 #include "ProcessorControlsComponent.h"
 
+#include "NamPreset.h"
+
 #include <algorithm>
 
 #include <unistd.h>
@@ -547,6 +549,38 @@ ProcessorControlsComponent::PluginTab::PluginTab (AudioEngine& engineToUse, Undo
     statusText.setText ("No plugin loaded", juce::dontSendNotification);
     addAndMakeVisible (statusText);
 
+    nativePresetLabel.setText ("Preset", juce::dontSendNotification);
+    addAndMakeVisible (nativePresetLabel);
+
+    addAndMakeVisible (nativePresetCombo);
+
+    nativePresetLoadButton.setButtonText ("Load");
+    nativePresetLoadButton.onClick = [this] { loadNativePreset(); };
+    addAndMakeVisible (nativePresetLoadButton);
+
+    nativePresetRefreshButton.setButtonText ("Refresh");
+    nativePresetRefreshButton.onClick = [this] { updatePluginSpecificControls (true); };
+    addAndMakeVisible (nativePresetRefreshButton);
+
+    namModelButton.setButtonText ("NAM model...");
+    namModelButton.onClick = [this] { chooseNamModel(); };
+    addAndMakeVisible (namModelButton);
+
+    namIrButton.setButtonText ("NAM IR...");
+    namIrButton.onClick = [this] { chooseNamIr(); };
+    addAndMakeVisible (namIrButton);
+
+    namPathLabel.setColour (juce::Label::textColourId, juce::Colours::lightgrey.withAlpha (0.75f));
+    addAndMakeVisible (namPathLabel);
+
+    nativePresetLabel.setVisible (false);
+    nativePresetCombo.setVisible (false);
+    nativePresetLoadButton.setVisible (false);
+    nativePresetRefreshButton.setVisible (false);
+    namModelButton.setVisible (false);
+    namIrButton.setVisible (false);
+    namPathLabel.setVisible (false);
+
     parameterViewport.setViewedComponent (&parameterPanel, false);
     addAndMakeVisible (parameterViewport);
 
@@ -580,6 +614,29 @@ void ProcessorControlsComponent::PluginTab::resized()
     editorButton.setBounds (row.removeFromLeft (80));
 
     bounds.removeFromTop (8);
+
+    if (nativePresetCombo.isVisible())
+    {
+        row = bounds.removeFromTop (28);
+        nativePresetLabel.setBounds (row.removeFromLeft (52));
+        nativePresetLoadButton.setBounds (row.removeFromRight (60));
+        row.removeFromRight (8);
+        nativePresetRefreshButton.setBounds (row.removeFromRight (70));
+        row.removeFromRight (8);
+        nativePresetCombo.setBounds (row);
+        bounds.removeFromTop (8);
+    }
+
+    if (namModelButton.isVisible())
+    {
+        row = bounds.removeFromTop (28);
+        namModelButton.setBounds (row.removeFromLeft (110));
+        row.removeFromLeft (8);
+        namIrButton.setBounds (row.removeFromLeft (90));
+        row.removeFromLeft (8);
+        namPathLabel.setBounds (row);
+        bounds.removeFromTop (8);
+    }
 
     statusText.setBounds (bounds.removeFromTop (56));
 
@@ -655,6 +712,16 @@ void ProcessorControlsComponent::PluginTab::rescanPlugins()
     });
 }
 
+void ProcessorControlsComponent::closePluginEditor()
+{
+    pluginTab.closeEditor();
+}
+
+void ProcessorControlsComponent::PluginTab::closeEditor()
+{
+    editorWindow.reset();
+}
+
 void ProcessorControlsComponent::PluginTab::loadSelectedPlugin()
 {
     const int index = pluginCombo.getSelectedItemIndex();
@@ -665,6 +732,17 @@ void ProcessorControlsComponent::PluginTab::loadSelectedPlugin()
         return;
     }
 
+    // The editor owns a component that points at the old plugin instance.
+    // It must be gone before the old instance is destroyed.
+    editorWindow.reset();
+    editorButton.setEnabled (false);
+    parameterPanel.removeAllChildren();
+    parameterSliders.clear();
+    parameterLabels.clear();
+
+    if (graph.isVst3PluginLoaded())
+        graph.unloadVst3Plugin();
+
     const double rate = engine.isRunning() ? engine.getSampleRate() : 48000.0;
     const int buffer = engine.isRunning() ? engine.getBufferSize() : 128;
 
@@ -673,6 +751,10 @@ void ProcessorControlsComponent::PluginTab::loadSelectedPlugin()
     if (error.isNotEmpty())
     {
         statusText.setText ("Error: " + error, juce::dontSendNotification);
+        removeButton.setEnabled (false);
+        bypassButton.setEnabled (false);
+        editorButton.setEnabled (false);
+        updatePluginSpecificControls (true);
         return;
     }
 
@@ -686,6 +768,7 @@ void ProcessorControlsComponent::PluginTab::loadSelectedPlugin()
     editorButton.setEnabled (instance != nullptr && instance->hasEditor());
 
     rebuildParameterSliders();
+    updatePluginSpecificControls (true);
 
     if (instance != nullptr && instance->hasEditor())
         openEditor();
@@ -706,10 +789,18 @@ void ProcessorControlsComponent::PluginTab::removePlugin()
     parameterPanel.removeAllChildren();
     parameterSliders.clear();
     parameterLabels.clear();
+
+    nativePresets.clear();
+    nativePresetCombo.clear();
+    loadedPluginName.clear();
+    namModelWindowsPath.clear();
+    namIrWindowsPath.clear();
+    updatePluginSpecificControls (true);
 }
 
 void ProcessorControlsComponent::PluginTab::refreshFromGraph()
 {
+    editorWindow.reset();
     rebuildParameterSliders();
     removeButton.setEnabled (graph.isVst3PluginLoaded());
     bypassButton.setEnabled (graph.isVst3PluginLoaded());
@@ -720,14 +811,241 @@ void ProcessorControlsComponent::PluginTab::refreshFromGraph()
     else
         editorButton.setEnabled (false);
 
-    editorWindow.reset();
     statusText.setText (graph.isVst3PluginLoaded()
                             ? "Loaded: " + graph.getVst3PluginName()
                             : "No plugin loaded",
                         juce::dontSendNotification);
+
+    updatePluginSpecificControls (false);
+}
+
+void ProcessorControlsComponent::PluginTab::updatePluginSpecificControls (bool forceRefresh)
+{
+    const auto pluginName = graph.isVst3PluginLoaded() ? graph.getVst3PluginName() : juce::String();
+
+    if (forceRefresh || pluginName != loadedPluginName)
+    {
+        loadedPluginName = pluginName;
+        nativePresets.clear();
+        nativePresetCombo.clear();
+        namModelWindowsPath.clear();
+        namIrWindowsPath.clear();
+
+        if (pluginName.isNotEmpty())
+        {
+            auto found = NeuralPreset::findPresets (pluginName);
+            juce::StringArray seenNames;
+
+            for (auto& entry : found)
+            {
+                if (seenNames.contains (entry.displayName))
+                    continue;
+
+                seenNames.add (entry.displayName);
+                nativePresets.push_back (entry);
+                nativePresetCombo.addItem (entry.displayName, static_cast<int> (nativePresets.size()));
+            }
+
+            if (! nativePresets.empty())
+                nativePresetCombo.setSelectedItemIndex (0, juce::dontSendNotification);
+        }
+    }
+
+    const bool hasNativePresets = ! nativePresets.empty();
+    const auto lowerPluginName = pluginName.toLowerCase();
+    const bool isNeuralDsp = lowerPluginName.contains ("archetype")
+                             || lowerPluginName.contains ("fortin")
+                             || lowerPluginName.contains ("darkglass")
+                             || lowerPluginName.contains ("soldano")
+                             || lowerPluginName.contains ("morgan")
+                             || lowerPluginName.contains ("omega")
+                             || lowerPluginName.contains ("parallax")
+                             || lowerPluginName.contains ("granophyre")
+                             || lowerPluginName.contains ("plini")
+                             || lowerPluginName.contains ("nolly");
+    const bool showNativeRow = hasNativePresets || isNeuralDsp;
+
+    if (showNativeRow && ! hasNativePresets && nativePresetCombo.getNumItems() == 0)
+    {
+        nativePresetCombo.addItem ("No presets found - mount the Windows drive and press Refresh", 1);
+        nativePresetCombo.setSelectedItemIndex (0, juce::dontSendNotification);
+    }
+
+    nativePresetLabel.setVisible (showNativeRow);
+    nativePresetCombo.setVisible (showNativeRow);
+    nativePresetLoadButton.setVisible (showNativeRow);
+    nativePresetRefreshButton.setVisible (showNativeRow);
+    nativePresetLoadButton.setEnabled (hasNativePresets);
+
+    const bool isNam = pluginName.containsIgnoreCase ("NeuralAmpModeler")
+                       || pluginName.containsIgnoreCase ("Neural Amp Modeler");
+
+    namModelButton.setVisible (isNam);
+    namIrButton.setVisible (isNam);
+    namPathLabel.setVisible (isNam);
+
+    if (isNam)
+    {
+        auto fileName = [] (const juce::String& path)
+        {
+            auto normalised = path.replaceCharacter ('\\', '/');
+            return normalised.fromLastOccurrenceOf ("/", false, false);
+        };
+
+        juce::String text;
+
+        if (namModelWindowsPath.isNotEmpty())
+            text << "Model: " << fileName (namModelWindowsPath);
+
+        if (namIrWindowsPath.isNotEmpty())
+        {
+            if (text.isNotEmpty())
+                text << "   ";
+
+            text << "IR: " << fileName (namIrWindowsPath);
+        }
+
+        if (text.isEmpty())
+            text = "No NAM model or IR selected";
+
+        namPathLabel.setText (text, juce::dontSendNotification);
+    }
+
+    resized();
+}
+
+void ProcessorControlsComponent::PluginTab::loadNativePreset()
+{
+    const int index = nativePresetCombo.getSelectedItemIndex();
+
+    if (index < 0 || index >= static_cast<int> (nativePresets.size()))
+        return;
+
+    auto* instance = graph.getVst3PluginInstance();
+
+    if (instance == nullptr)
+        return;
+
+    undo.captureUndoState (graph);
+
+    int matched = 0;
+    int total = 0;
+    const auto error = NeuralPreset::load (nativePresets[static_cast<size_t> (index)].file,
+                                           *instance, matched, total);
+
+    if (error.isNotEmpty())
+    {
+        statusText.setText ("Preset: " + error, juce::dontSendNotification);
+        return;
+    }
+
+    rebuildParameterSliders();
+
+    if (editorWindow != nullptr)
+    {
+        editorWindow.reset();
+
+        if (instance->hasEditor())
+            openEditor();
+    }
+
+    statusText.setText ("Preset: " + nativePresets[static_cast<size_t> (index)].displayName
+                            + " (" + juce::String (matched) + "/" + juce::String (total) + " parameters)",
+                        juce::dontSendNotification);
+}
+
+void ProcessorControlsComponent::PluginTab::chooseNamModel()
+{
+    auto chooser = std::make_shared<juce::FileChooser> ("Load NAM model",
+                                                        juce::File::getSpecialLocation (juce::File::userHomeDirectory),
+                                                        "*.nam");
+    juce::Component::SafePointer<PluginTab> safeThis (this);
+
+    chooser->launchAsync (juce::FileBrowserComponent::openMode
+                              | juce::FileBrowserComponent::canSelectFiles,
+                          [safeThis, chooser] (const juce::FileChooser& fileChooser)
+    {
+        if (safeThis == nullptr)
+            return;
+
+        const auto file = fileChooser.getResult();
+
+        if (file == juce::File())
+            return;
+
+        auto* instance = safeThis->graph.getVst3PluginInstance();
+
+        if (instance == nullptr)
+            return;
+
+        const auto description = safeThis->graph.getVst3PluginDescription();
+
+        juce::String newPath;
+        const auto error = NamPreset::loadModel (*instance,
+                                                 description.version,
+                                                 file,
+                                                 safeThis->namIrWindowsPath,
+                                                 newPath);
+
+        if (error.isNotEmpty())
+        {
+            safeThis->statusText.setText ("NAM model: " + error, juce::dontSendNotification);
+            return;
+        }
+
+        safeThis->namModelWindowsPath = newPath;
+        safeThis->statusText.setText ("NAM model: " + file.getFileName(), juce::dontSendNotification);
+        safeThis->updatePluginSpecificControls (false);
+    });
+}
+
+void ProcessorControlsComponent::PluginTab::chooseNamIr()
+{
+    auto chooser = std::make_shared<juce::FileChooser> ("Load NAM IR",
+                                                        juce::File::getSpecialLocation (juce::File::userHomeDirectory),
+                                                        "*.wav;*.nam");
+    juce::Component::SafePointer<PluginTab> safeThis (this);
+
+    chooser->launchAsync (juce::FileBrowserComponent::openMode
+                              | juce::FileBrowserComponent::canSelectFiles,
+                          [safeThis, chooser] (const juce::FileChooser& fileChooser)
+    {
+        if (safeThis == nullptr)
+            return;
+
+        const auto file = fileChooser.getResult();
+
+        if (file == juce::File())
+            return;
+
+        auto* instance = safeThis->graph.getVst3PluginInstance();
+
+        if (instance == nullptr)
+            return;
+
+        const auto description = safeThis->graph.getVst3PluginDescription();
+
+        juce::String newPath;
+        const auto error = NamPreset::loadIr (*instance,
+                                              description.version,
+                                              file,
+                                              safeThis->namModelWindowsPath,
+                                              newPath);
+
+        if (error.isNotEmpty())
+        {
+            safeThis->statusText.setText ("NAM IR: " + error, juce::dontSendNotification);
+            return;
+        }
+
+        safeThis->namIrWindowsPath = newPath;
+        safeThis->statusText.setText ("NAM IR: " + file.getFileName(), juce::dontSendNotification);
+        safeThis->updatePluginSpecificControls (false);
+    });
 }
 
 void ProcessorControlsComponent::PluginTab::rebuildParameterSliders()
+
 {
     parameterPanel.removeAllChildren();
     parameterSliders.clear();

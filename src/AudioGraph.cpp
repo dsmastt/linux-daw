@@ -1,5 +1,7 @@
 #include "AudioGraph.h"
 
+#include <juce_audio_processors/juce_audio_processors.h>
+
 #include <algorithm>
 
 #include <juce_audio_basics/juce_audio_basics.h>
@@ -77,6 +79,7 @@ juce::String AudioGraph::getVst3PluginName() const noexcept { return getTrack (0
 void AudioGraph::setVst3PluginBypassed (bool shouldBeBypassed) noexcept { getTrack (0).setVst3PluginBypassed (shouldBeBypassed); }
 bool AudioGraph::isVst3PluginBypassed() const noexcept { return getTrack (0).isVst3PluginBypassed(); }
 juce::AudioPluginInstance* AudioGraph::getVst3PluginInstance() const noexcept { return getTrack (0).getVst3PluginInstance(); }
+juce::PluginDescription AudioGraph::getVst3PluginDescription() const noexcept { return getTrack (0).getVst3PluginDescription(); }
 
 void AudioGraph::setProcessorBypassed (ProcessorSlot slot, bool shouldBeBypassed) noexcept { getTrack (0).setProcessorBypassed (slot, shouldBeBypassed); }
 bool AudioGraph::isProcessorBypassed (ProcessorSlot slot) const noexcept { return getTrack (0).isProcessorBypassed (slot); }

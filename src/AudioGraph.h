@@ -88,6 +88,7 @@ public:
     void setVst3PluginBypassed (bool shouldBeBypassed) noexcept;
     bool isVst3PluginBypassed() const noexcept;
     juce::AudioPluginInstance* getVst3PluginInstance() const noexcept;
+    juce::PluginDescription getVst3PluginDescription() const noexcept;
 
     void setProcessorBypassed (ProcessorSlot slot, bool shouldBeBypassed) noexcept;
     bool isProcessorBypassed (ProcessorSlot slot) const noexcept;

@@ -136,10 +136,9 @@ MainComponent::MainComponent()
     midi = std::make_unique<MidiComponent> (engine);
     automation = std::make_unique<AutomationComponent> (engine, undoManager);
     tunerComponent = std::make_unique<TunerComponent> (engine);
-    presetComponent = std::make_unique<PresetComponent> (engine, undoManager, [this]
-    {
-        refreshAfterUndoRedo();
-    });
+    presetComponent = std::make_unique<PresetComponent> (engine, undoManager,
+                                                          [this] { refreshAfterUndoRedo(); },
+                                                          [this] { closePluginEditor(); });
 
     viewTabs.addTab ("DSP", juce::Colours::darkgrey, processorControls.get(), false);
     viewTabs.addTab ("Tuner", juce::Colours::darkgrey, tunerComponent.get(), false);
@@ -170,13 +169,23 @@ MainComponent::MainComponent()
 MainComponent::~MainComponent()
 {
     stopTimer();
+    stopAudio();
 
-    // These components own timers that reference the engine, so destroy them
-    // before the engine and the message loop go away.
+    // These components own timers and plugin editors that reference the
+    // engine, so destroy them while the engine is still alive.
     tunerComponent.reset();
     presetComponent.reset();
+    automation.reset();
+    midi.reset();
+    timeline.reset();
+    mixer.reset();
+    processorControls.reset();
+}
 
-    stopAudio();
+void MainComponent::closePluginEditor()
+{
+    if (processorControls != nullptr)
+        processorControls->closePluginEditor();
 }
 
 void MainComponent::resized()

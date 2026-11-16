@@ -43,6 +43,8 @@ set(CORE_SOURCES
     src/GainProcessor.cpp
     src/Metronome.cpp
     src/MidiInputHandler.cpp
+    src/NamPreset.cpp
+    src/NeuralPreset.cpp
     src/NoiseGateProcessor.cpp
     src/ParametricEqProcessor.cpp
     src/PlaybackProcessor.cpp
